@@ -1,3 +1,22 @@
+## robot_localization (hydro) - 0.1.0-3
+
+User `pulse-dev@pulse-vm` released the packages in the `robot_localization` repository into the `hydro` distro by running `/usr/bin/bloom-release robot_localization --track hydro --rosdistro hydro` on `Wed, 09 Apr 2014 03:49:36 -0000`
+
+The `robot_localization` package was released.
+
+Version of package(s) in repository `robot_localization`:
+- rosdistro version: `0.1.0-1`
+- old version: `0.1.0-2`
+- new version: `0.1.0-3`
+
+Versions of tools used:
+- bloom version: `0.5.2`
+- catkin_pkg version: `0.1.28`
+- rosdep version: `0.10.25`
+- rosdistro version: `0.3.4`
+- vcstools version: `0.1.33`
+
+
 ## robot_localization (hydro) - 0.1.0-2
 
 User `pulse-dev@pulse-vm` released the packages in the `robot_localization` repository into the `hydro` distro by running `/usr/bin/bloom-release robot_localization --track hydro --rosdistro hydro` on `Wed, 09 Apr 2014 03:13:08 -0000`
