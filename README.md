@@ -1,3 +1,22 @@
+## robot_localization (groovy) - 0.1.0-0
+
+User `tmoore@aramis` released the packages in the `robot_localization` repository into the `groovy` distro by running `/usr/bin/bloom-release robot_localization --track groovy --rosdistro groovy --new-track` on `Tue, 15 Apr 2014 12:51:05 -0000`
+
+The `robot_localization` package was released.
+
+Version of package(s) in repository `robot_localization`:
+- rosdistro version: `null`
+- old version: `null`
+- new version: `0.1.0-0`
+
+Versions of tools used:
+- bloom version: `0.5.2`
+- catkin_pkg version: `0.1.28`
+- rosdep version: `0.10.25`
+- rosdistro version: `0.3.4`
+- vcstools version: `0.1.33`
+
+
 ## robot_localization (indigo) - 0.1.1-0
 
 User `pulse-dev@pulse-vm` released the packages in the `robot_localization` repository into the `indigo` distro by running `/usr/bin/bloom-release robot_localization --track indigo --rosdistro indigo --new-track` on `Mon, 14 Apr 2014 20:53:40 -0000`
