@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(robot_localization)
 
-find_package(catkin REQUIRED COMPONENTS roscpp tf std_msgs geometry_msgs nav_msgs sensor_msgs)
+find_package(catkin REQUIRED COMPONENTS roscpp tf std_msgs geometry_msgs nav_msgs sensor_msgs cmake_modules)
 find_package(Eigen REQUIRED)
 
 ###################################
@@ -16,8 +16,7 @@ find_package(Eigen REQUIRED)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
-  CATKIN_DEPENDS roscpp
-  DEPENDS eigen
+  CATKIN_DEPENDS roscpp std_msgs geometry_msgs nav_msgs sensor_msgs cmake_modules
 )
 
 ###########
