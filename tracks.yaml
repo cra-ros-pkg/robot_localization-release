@@ -12,7 +12,7 @@ tracks:
     last_version: 0.1.2
     name: robot_localization
     patches: null
-    release_inc: '0'
+    release_inc: '1'
     release_repo_url: null
     release_tag: 0.1.2
     ros_distro: groovy
