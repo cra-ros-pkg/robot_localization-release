@@ -1,0 +1,12 @@
+Source: ros-hydro-robot-localization
+Section: misc
+Priority: extra
+Maintainer: Tom Moore <tmoore@cra.com>
+Build-Depends: debhelper (>= 9.0.0), libeigen3-dev, ros-hydro-catkin, ros-hydro-cmake-modules, ros-hydro-geometry-msgs, ros-hydro-nav-msgs, ros-hydro-roscpp, ros-hydro-sensor-msgs, ros-hydro-std-msgs, ros-hydro-tf
+Homepage: http://ros.org/wiki/robot_localization
+Standards-Version: 3.9.2
+
+Package: ros-hydro-robot-localization
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libeigen3-dev, ros-hydro-cmake-modules, ros-hydro-geometry-msgs, ros-hydro-nav-msgs, ros-hydro-roscpp, ros-hydro-sensor-msgs, ros-hydro-std-msgs, ros-hydro-tf
+Description: The robot_localization package provides nonlinear state estimation through sensor fusion of an abritrary number of sensors.
