@@ -54,8 +54,8 @@ tracks:
     patches: null
     release_inc: '1'
     release_repo_url: null
-    release_tag: 2.1.2
+    release_tag: 2.1.3
     ros_distro: indigo
     vcs_type: git
     vcs_uri: https://github.com/cra-ros-pkg/robot_localization.git
-    version: 2.1.2
+    version: 2.1.3
