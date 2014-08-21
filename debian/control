@@ -1,0 +1,12 @@
+Source: ros-groovy-robot-localization
+Section: misc
+Priority: extra
+Maintainer: Tom Moore <tmoore@cra.com>
+Build-Depends: debhelper (>= 7.0.0), libeigen3-dev, ros-groovy-catkin, ros-groovy-cmake-modules, ros-groovy-geometry-msgs, ros-groovy-nav-msgs, ros-groovy-roscpp, ros-groovy-sensor-msgs, ros-groovy-std-msgs, ros-groovy-tf
+Homepage: http://ros.org/wiki/robot_localization
+Standards-Version: 3.9.2
+
+Package: ros-groovy-robot-localization
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libeigen3-dev, ros-groovy-cmake-modules, ros-groovy-geometry-msgs, ros-groovy-nav-msgs, ros-groovy-roscpp, ros-groovy-sensor-msgs, ros-groovy-std-msgs, ros-groovy-tf
+Description: The robot_localization package provides nonlinear state estimation through sensor fusion of an abritrary number of sensors.
