@@ -30,17 +30,19 @@ tracks:
     - git-bloom-generate -y rosrelease :{ros_distro} --source upstream -i :{release_inc}
     - git-bloom-generate -y rosdebian --prefix release/:{ros_distro} :{ros_distro}
       -i :{release_inc}
+    - git-bloom-generate -y rosrpm --prefix release/:{ros_distro} :{ros_distro} -i
+      :{release_inc}
     devel_branch: null
     last_version: 1.1.3
     name: robot_localization
     patches: null
     release_inc: '0'
     release_repo_url: null
-    release_tag: 1.1.3
+    release_tag: 1.1.4
     ros_distro: hydro
     vcs_type: git
     vcs_uri: https://github.com/cra-ros-pkg/robot_localization.git
-    version: 1.1.3
+    version: 1.1.4
   indigo:
     actions:
     - bloom-export-upstream :{vcs_local_uri} :{vcs_type} --tag :{release_tag} --display-uri
