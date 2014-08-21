@@ -1,3 +1,24 @@
+## robot_localization (hydro) - 1.1.4-0
+
+The packages in the `robot_localization` repository were released into the `hydro` distro by running `/usr/bin/bloom-release robot_localization --track hydro --rosdistro hydro --edit` on `Thu, 21 Aug 2014 22:23:02 -0000`
+
+The `robot_localization` package was released.
+
+Version of package(s) in repository `robot_localization`:
+- upstream repository: https://github.com/cra-ros-pkg/robot_localization.git
+- release repository: https://github.com/cra-ros-pkg/robot_localization-release.git
+- rosdistro version: `1.1.3-0`
+- old version: `1.1.3-0`
+- new version: `1.1.4-0`
+
+Versions of tools used:
+- bloom version: `0.5.11`
+- catkin_pkg version: `0.2.4`
+- rosdep version: `0.10.30`
+- rosdistro version: `0.3.5`
+- vcstools version: `0.1.35`
+
+
 ## robot_localization (groovy) - 0.1.4-0
 
 The packages in the `robot_localization` repository were released into the `groovy` distro by running `/usr/bin/bloom-release robot_localization --track groovy --rosdistro groovy --edit` on `Thu, 21 Aug 2014 22:13:45 -0000`
