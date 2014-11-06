@@ -1,8 +1,8 @@
-<!-- Launch file for ekf_localization_node_test-interfaces -->
+<!-- Launch file for ukf_localization_node_test-interfaces -->
 
 <launch>
 
-    <node name="ekf_localization_node_test_interfaces_rl" pkg="robot_localization" type="ekf_localization_node" clear_params="true">
+    <node name="ukf_localization_node_test_interfaces_rl" pkg="robot_localization" type="ukf_localization_node" clear_params="true">
 
       <param name="frequency" value="30"/>  
 
@@ -37,10 +37,14 @@
       <param name="twist0_differential" value="false"/>
 
       <param name="debug"           value="false"/>
-      <param name="debug_out_file"  value="ekf_navigation.txt"/>
+      <param name="debug_out_file"  value="ukf_navigation.txt"/>
 
       <param name="odom_frame" value="odom"/>
       <param name="base_link_frame" value="base_link"/>
+
+      <param name="alpha" value="0.001"/> 
+      <param name="kappa" value="0"/> 
+      <param name="beta" value="2"/>
 
       <rosparam param="process_noise_covariance">[0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                                   0.0, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -60,6 +64,6 @@
 
     </node>
 
-    <test test-name="ekf_localization_node_test_interfaces_t" pkg="robot_localization" type="ekf_localization_node-test-interfaces" clear_params="true" time-limit="100.0" />
+    <test test-name="ukf_localization_node_test_interfaces_t" pkg="robot_localization" type="ukf_localization_node-test-interfaces" clear_params="true" time-limit="100.0" />
 
 </launch>
