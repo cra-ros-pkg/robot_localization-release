@@ -1,3 +1,24 @@
+## robot_localization (indigo) - 2.1.6-0
+
+The packages in the `robot_localization` repository were released into the `indigo` distro by running `/usr/bin/bloom-release robot_localization --track indigo --rosdistro indigo --edit` on `Thu, 06 Nov 2014 21:46:26 -0000`
+
+The `robot_localization` package was released.
+
+Version of package(s) in repository `robot_localization`:
+- upstream repository: https://github.com/cra-ros-pkg/robot_localization.git
+- release repository: https://github.com/cra-ros-pkg/robot_localization-release.git
+- rosdistro version: `2.1.5-0`
+- old version: `2.1.5-0`
+- new version: `2.1.6-0`
+
+Versions of tools used:
+- bloom version: `0.5.12`
+- catkin_pkg version: `0.2.6`
+- rosdep version: `0.10.32`
+- rosdistro version: `0.3.6`
+- vcstools version: `0.1.35`
+
+
 ## robot_localization (hydro) - 1.1.5-0
 
 The packages in the `robot_localization` repository were released into the `hydro` distro by running `/usr/bin/bloom-release --rosdistro hydro --track hydro robot_localization --edit` on `Tue, 07 Oct 2014 01:22:48 -0000`
