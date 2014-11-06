@@ -30,8 +30,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <robot_localization/filter_common.h>
-#include <robot_localization/ekf.h>
+#include "robot_localization/filter_common.h"
+#include "robot_localization/ekf.h"
 
 #include <sstream>
 #include <iomanip>
@@ -100,6 +100,9 @@ namespace RobotLocalization
     processNoiseCovariance_(StateMemberVroll, StateMemberVroll) = 0.002;
     processNoiseCovariance_(StateMemberVpitch, StateMemberVpitch) = 0.002;
     processNoiseCovariance_(StateMemberVyaw, StateMemberVyaw) = 0.004;
+    processNoiseCovariance_(StateMemberAx, StateMemberAx) = 0.01;
+    processNoiseCovariance_(StateMemberAy, StateMemberAy) = 0.01;
+    processNoiseCovariance_(StateMemberAz, StateMemberAz) = 0.01;
   }
 
   FilterBase::~FilterBase()
@@ -255,7 +258,7 @@ namespace RobotLocalization
 
       if (debug_)
       {
-        *debugStream_ << "Filter is already initialized. Carrying out EKF loop...\n";
+        *debugStream_ << "Filter is already initialized. Carrying out predict/correct loop...\n";
         *debugStream_ << "Measurement time is " << std::setprecision(20) << measurement.time_ <<
                          ", last measurement time is " << lastMeasurementTime_ << ", delta is " << delta << "\n";
       }
