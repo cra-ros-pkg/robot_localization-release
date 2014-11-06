@@ -1,4 +1,4 @@
-<!-- Launch file for ekf_localization_node_bag-test2 -->
+<!-- Launch file for ukf_localization_node_bag-test2 -->
 
 <launch>
 
@@ -6,7 +6,7 @@
 
     <node pkg="rosbag" type="play" name="rosbagplay" args="$(find robot_localization)/test/test2.bag --clock -d 5" required="true"/>
 
-    <node name="ekf_localization_node_test_bag_test2" pkg="robot_localization" type="ekf_localization_node" clear_params="true" >
+    <node name="ukf_localization_node_test_bag_test2" pkg="robot_localization" type="ukf_localization_node" clear_params="true" >
 
       <param name="frequency" value="50"/>
 
@@ -41,7 +41,11 @@
       <param name="remove_gravitational_acceleration" value="true"/>
 
       <param name="debug"           value="false"/>
-      <param name="debug_out_file"  value="ekf_navigation.txt"/>
+      <param name="debug_out_file"  value="ukf_navigation.txt"/>
+
+      <param name="alpha" value="0.001"/> 
+      <param name="kappa" value="0"/> 
+      <param name="beta" value="2"/>
 
       <rosparam param="process_noise_covariance">[0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                                   0.0, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -61,11 +65,11 @@
 
     </node>
 
-    <test test-name="ekf_localization_node_test_bag2_t" pkg="robot_localization" type="ekf_localization_node-test-bag2" clear_params="true" time-limit="1000.0">
-      <param name="final_x" value="0.9551"/>
-      <param name="final_y" value="3.2983"/>
-      <param name="final_z" value="0.7363"/>
-      <param name="tolerance" value="0.0612"/>
+    <test test-name="ukf_localization_node_test_bag2_t" pkg="robot_localization" type="ukf_localization_node-test-bag2" clear_params="true" time-limit="1000.0">
+      <param name="final_x" value="0.9480"/>
+      <param name="final_y" value="3.3014"/>
+      <param name="final_z" value="0.7217"/>
+      <param name="tolerance" value="0.0521"/>
     </test>
 
 </launch>
