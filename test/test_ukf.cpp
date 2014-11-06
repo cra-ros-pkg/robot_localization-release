@@ -1,13 +1,17 @@
-#include "robot_localization/ekf.h"
+#include "robot_localization/ukf.h"
 #include "robot_localization/filter_common.h"
 
 #include <gtest/gtest.h>
 
 using namespace RobotLocalization;
 
-TEST (EkfTest, Measurements)
+TEST (UkfTest, Measurements)
 {
-  Ekf ekf;
+  std::vector<double> args;
+  args.push_back(0.001);
+  args.push_back(0);
+  args.push_back(2);
+  Ukf ukf(args);
 
   Eigen::VectorXd measurement(STATE_SIZE);
   for(size_t i = 0; i < STATE_SIZE; ++i)
@@ -24,7 +28,7 @@ TEST (EkfTest, Measurements)
   std::vector<int> updateVector(STATE_SIZE, true);
 
   // Ensure that measurements are being placed in the queue correctly
-  ekf.enqueueMeasurement("odom0",
+  ukf.enqueueMeasurement("odom0",
                          measurement,
                          measurementCovariance,
                          updateVector,
@@ -32,11 +36,11 @@ TEST (EkfTest, Measurements)
 
   std::map<std::string, Eigen::VectorXd> postUpdateStates;
 
-  ekf.integrateMeasurements(1001,
+  ukf.integrateMeasurements(1001,
                             postUpdateStates);
 
-  EXPECT_EQ(ekf.getState(), measurement);
-  EXPECT_EQ(ekf.getEstimateErrorCovariance(), measurementCovariance);
+  EXPECT_EQ(ukf.getState(), measurement);
+  EXPECT_EQ(ukf.getEstimateErrorCovariance(), measurementCovariance);
 
   // Now fuse another measurement and check the output.
   // We know what the filter's state should be when
@@ -46,32 +50,32 @@ TEST (EkfTest, Measurements)
 
   measurement2 *= 2.0;
 
-  ekf.enqueueMeasurement("odom0",
+  ukf.enqueueMeasurement("odom0",
                          measurement2,
                          measurementCovariance,
                          updateVector,
                          1002);
 
-  ekf.integrateMeasurements(1003,
+  ukf.integrateMeasurements(1003,
                             postUpdateStates);
 
-  measurement[0] = -4.5198;
-  measurement[1] = 0.14655;
-  measurement[2] = 9.4514;
-  measurement[3] = -2.8688;
-  measurement[4] = -2.2672;
-  measurement[5] = 0.12861;
-  measurement[6] = 15.481;
-  measurement[7] = 17.517;
-  measurement[8] = 19.587;
-  measurement[9] = 9.8351;
-  measurement[10] = 12.73;
-  measurement[11] = 13.87;
-  measurement[12] = 10.978;
-  measurement[13] = 12.008;
-  measurement[14] = 13.126;
+  measurement[0] = -5.5142;
+  measurement[1] = -0.91698;
+  measurement[2] = 10.304;
+  measurement[3] = -2.1372;
+  measurement[4] = 0.36284;
+  measurement[5] = 2.8628;
+  measurement[6] = 15.535;
+  measurement[7] = 16.659;
+  measurement[8] = 18.634;
+  measurement[9] = 9.0708;
+  measurement[10] = 10.071;
+  measurement[11] = 11.071;
+  measurement[12] = 10.5;
+  measurement[13] = 11.5;
+  measurement[14] = 12.5;
 
-  measurement = measurement.eval() - ekf.getState();
+  measurement = measurement.eval() - ukf.getState();
 
   for(size_t i = 0; i < STATE_SIZE; ++i)
   {
