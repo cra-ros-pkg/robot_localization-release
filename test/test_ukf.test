@@ -1,0 +1,7 @@
+<!-- Launch file for test_ukf -->
+
+<launch>
+
+    <test test-name="ukf_t" pkg="robot_localization" type="ukf-test" clear_params="true" time-limit="100.0" />
+
+</launch>
