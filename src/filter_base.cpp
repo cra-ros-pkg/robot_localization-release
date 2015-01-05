@@ -42,6 +42,7 @@ namespace RobotLocalization
 {
   FilterBase::FilterBase() :
     state_(STATE_SIZE),
+    predictedState_(STATE_SIZE),
     transferFunction_(STATE_SIZE, STATE_SIZE),
     transferFunctionJacobian_(STATE_SIZE, STATE_SIZE),
     estimateErrorCovariance_(STATE_SIZE, STATE_SIZE),
@@ -55,8 +56,9 @@ namespace RobotLocalization
   {
     initialized_ = false;
 
-    // Clear the state
+    // Clear the state and predicted state
     state_.setZero();
+    predictedState_.setZero();
 
     // Prepare the invariant parts of the transfer
     // function
@@ -88,115 +90,25 @@ namespace RobotLocalization
     // These can be overridden via the launch parameters,
     // but we need default values.
     processNoiseCovariance_.setZero();
-    processNoiseCovariance_(StateMemberX, StateMemberX) = 0.03;
-    processNoiseCovariance_(StateMemberY, StateMemberY) = 0.03;
-    processNoiseCovariance_(StateMemberZ, StateMemberZ) = 0.4;
+    processNoiseCovariance_(StateMemberX, StateMemberX) = 0.05;
+    processNoiseCovariance_(StateMemberY, StateMemberY) = 0.05;
+    processNoiseCovariance_(StateMemberZ, StateMemberZ) = 0.06;
     processNoiseCovariance_(StateMemberRoll, StateMemberRoll) = 0.03;
     processNoiseCovariance_(StateMemberPitch, StateMemberPitch) = 0.03;
     processNoiseCovariance_(StateMemberYaw, StateMemberYaw) = 0.06;
     processNoiseCovariance_(StateMemberVx, StateMemberVx) = 0.025;
     processNoiseCovariance_(StateMemberVy, StateMemberVy) = 0.025;
-    processNoiseCovariance_(StateMemberVz, StateMemberVz) = 0.05;
-    processNoiseCovariance_(StateMemberVroll, StateMemberVroll) = 0.002;
-    processNoiseCovariance_(StateMemberVpitch, StateMemberVpitch) = 0.002;
-    processNoiseCovariance_(StateMemberVyaw, StateMemberVyaw) = 0.004;
+    processNoiseCovariance_(StateMemberVz, StateMemberVz) = 0.04;
+    processNoiseCovariance_(StateMemberVroll, StateMemberVroll) = 0.01;
+    processNoiseCovariance_(StateMemberVpitch, StateMemberVpitch) = 0.01;
+    processNoiseCovariance_(StateMemberVyaw, StateMemberVyaw) = 0.02;
     processNoiseCovariance_(StateMemberAx, StateMemberAx) = 0.01;
     processNoiseCovariance_(StateMemberAy, StateMemberAy) = 0.01;
-    processNoiseCovariance_(StateMemberAz, StateMemberAz) = 0.01;
+    processNoiseCovariance_(StateMemberAz, StateMemberAz) = 0.015;
   }
 
   FilterBase::~FilterBase()
   {
-  }
-
-  void FilterBase::enqueueMeasurement(const std::string &topicName,
-                                      const Eigen::VectorXd &measurement,
-                                      const Eigen::MatrixXd &measurementCovariance,
-                                      const std::vector<int> &updateVector,
-                                      const double time)
-  {
-    Measurement meas;
-
-    meas.topicName_ = topicName;
-    meas.measurement_ = measurement;
-    meas.covariance_ = measurementCovariance;
-    meas.updateVector_ = updateVector;
-    meas.time_ = time;
-
-    measurementQueue_.push(meas);
-  }
-
-  void FilterBase::integrateMeasurements(double currentTime,
-                                         std::map<std::string, Eigen::VectorXd> &postUpdateStates)
-  {
-    if (debug_)
-    {
-      *debugStream_ << "------ FilterBase::integrateMeasurements ------\n\n";
-      *debugStream_ << "Integration time is " << std::setprecision(20) << currentTime << "\n";
-    }
-
-    postUpdateStates.clear();
-
-    if (debug_)
-    {
-      *debugStream_ << measurementQueue_.size() << " measurements in queue.\n";
-    }
-
-    // If we have any measurements in the queue, process them
-    if (!measurementQueue_.empty())
-    {
-      while (!measurementQueue_.empty())
-      {
-        Measurement measurement = measurementQueue_.top();
-        measurementQueue_.pop();
-
-        processMeasurement(measurement);
-
-        postUpdateStates.insert(std::pair<std::string, Eigen::VectorXd>(measurement.topicName_, state_));
-      }
-
-      lastUpdateTime_ = currentTime;
-    }
-    else if (initialized_)
-    {
-      // In the event that we don't get any measurements for a long time,
-      // we still need to continue to estimate our state. Therefore, we
-      // should project the state forward here.
-      double lastUpdateDelta = currentTime - lastUpdateTime_;
-
-      // If we get a large delta, then continuously predict until
-      if(lastUpdateDelta >= sensorTimeout_)
-      {
-        double projectTime = sensorTimeout_ * std::floor(lastUpdateDelta / sensorTimeout_);
-
-        if (debug_)
-        {
-          *debugStream_ << "Sensor timeout! Last measurement was " << std::setprecision(10) << lastMeasurementTime_ << ", current time is " <<
-                           currentTime << ", delta is " << lastUpdateDelta << ", projection time is " << projectTime << "\n";
-        }
-
-        validateDelta(projectTime);
-
-        predict(projectTime);
-
-        // Update the last measurement time and last update time
-        lastMeasurementTime_ += projectTime;
-        lastUpdateTime_ += projectTime;
-      }
-
-    }
-    else
-    {
-      if (debug_)
-      {
-        *debugStream_ << "Filter not yet initialized.\n";
-      }
-    }
-
-    if (debug_)
-    {
-      *debugStream_ << "\n----- /FilterBase::integrateMeasurements ------\n";
-    }
   }
 
   bool FilterBase::getDebug()
@@ -222,6 +134,11 @@ namespace RobotLocalization
   double FilterBase::getLastUpdateTime()
   {
     return lastUpdateTime_;
+  }
+
+  const Eigen::VectorXd& FilterBase::getPredictedState()
+  {
+    return predictedState_;
   }
 
   const Eigen::MatrixXd& FilterBase::getProcessNoiseCovariance()
@@ -270,6 +187,9 @@ namespace RobotLocalization
         validateDelta(delta);
 
         predict(delta);
+
+        // Return this to the user
+        predictedState_ = state_;
       }
 
       correct(measurement);
@@ -413,7 +333,35 @@ namespace RobotLocalization
       state_(StateMemberYaw) -= tau_;
     }
   }
+
+  bool FilterBase::checkMahalanobisThreshold(const Eigen::VectorXd &innovation,
+                                             const Eigen::MatrixXd &invCovariance,
+                                             const double nsigmas)
+  {
+    double sqMahalanobis = innovation.dot(invCovariance * innovation);
+    double threshold = nsigmas*nsigmas;
+
+    if (sqMahalanobis >= threshold)
+    {
+      if (getDebug())
+      {
+        *debugStream_ << "Innovation mahalanobis distance test failed. Squared Mahalanobis is\n";
+        *debugStream_ << sqMahalanobis << "\n";
+        *debugStream_ << "threshold was:\n";
+        *debugStream_ << threshold << "\n";
+        *debugStream_ << "Innovation:\n";
+        *debugStream_ << innovation << "\n";
+        *debugStream_ << "Inv covariance:\n";
+        *debugStream_ << invCovariance << "\n";
+      }
+      return false;
+    }
+
+    return true;
+  }
 }
+
+
 
 std::ostream& operator<<(std::ostream& os, const Eigen::MatrixXd &mat)
 {
