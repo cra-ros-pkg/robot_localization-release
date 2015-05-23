@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Charles River Analytics, Inc.
+ * Copyright (c) 2015, Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,8 +30,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "robot_localization/filter_common.h"
 #include "robot_localization/ukf.h"
+#include "robot_localization/filter_common.h"
 
 #include <XmlRpcException.h>
 
@@ -83,20 +83,15 @@ namespace RobotLocalization
 
   void Ukf::correct(const Measurement &measurement)
   {
-    if (getDebug())
-    {
-      *debugStream_ << "---------------------- Ukf::correct ----------------------\n";
-      *debugStream_ << "State is:\n";
-      *debugStream_ << state_ << "\n";
-      *debugStream_ << "Measurement is:\n";
-      *debugStream_ << measurement.measurement_ << "\n";
-      *debugStream_ << "Measurement covariance is:\n";
-      *debugStream_ << measurement.covariance_ << "\n";
-    }
+    FB_DEBUG("---------------------- Ukf::correct ----------------------\n" <<
+             "State is:\n" << state_ <<
+             "\nMeasurement is:\n" << measurement.measurement_ <<
+             "\nMeasurement covariance is:\n" << measurement.covariance_ << "\n");
 
     // In our implementation, it may be that after we call predict once, we call correct
     // several times in succession (multiple measurements with different time stamps). In
     // that event, the sigma points need to be updated to reflect the current state.
+    // Throughout prediction and correction, we attempt to maximize efficiency in Eigen.
     if(!uncorrected_)
     {
       // Take the square root of a small fraction of the estimateErrorCovariance_ using LL' decomposition
@@ -128,17 +123,11 @@ namespace RobotLocalization
         // Handle nan and inf values in measurements
         if (std::isnan(measurement.measurement_(i)))
         {
-          if (getDebug())
-          {
-            *debugStream_ << "Value at index " << i << " was nan. Excluding from update.\n";
-          }
+          FB_DEBUG("Value at index " << i << " was nan. Excluding from update.\n");
         }
         else if (std::isinf(measurement.measurement_(i)))
         {
-          if (getDebug())
-          {
-            *debugStream_ << "Value at index " << i << " was inf. Excluding from update.\n";
-          }
+          FB_DEBUG("Value at index " << i << " was inf. Excluding from update.\n");
         }
         else
         {
@@ -147,11 +136,7 @@ namespace RobotLocalization
       }
     }
 
-    if (getDebug())
-    {
-      *debugStream_ << "Update indices are:\n";
-      *debugStream_ << updateIndices << "\n";
-    }
+    FB_DEBUG("Update indices are:\n" << updateIndices << "\n");
 
     size_t updateSize = updateIndices.size();
 
@@ -195,11 +180,9 @@ namespace RobotLocalization
       // the absolute value.
       if (measurementCovarianceSubset(i, i) < 0)
       {
-        if (getDebug())
-        {
-          *debugStream_ << "WARNING: Negative covariance for index " << i << " of measurement (value is" << measurementCovarianceSubset(i, i)
-            << "). Using absolute value...\n";
-        }
+        FB_DEBUG("WARNING: Negative covariance for index " << i <<
+                 " of measurement (value is" << measurementCovarianceSubset(i, i) <<
+                 "). Using absolute value...\n");
 
         measurementCovarianceSubset(i, i) = ::fabs(measurementCovarianceSubset(i, i));
       }
@@ -210,14 +193,13 @@ namespace RobotLocalization
       // the Kalman gain computation will blow up. Really, no
       // measurement can be completely without error, so add a small
       // amount in that case.
-      if (measurementCovarianceSubset(i, i) < 1e-6)
+      if (measurementCovarianceSubset(i, i) < 1e-9)
       {
-        measurementCovarianceSubset(i, i) = 1e-6;
+        measurementCovarianceSubset(i, i) = 1e-9;
 
-        if (getDebug())
-        {
-          *debugStream_ << "WARNING: measurement had very small error covariance for index " << updateIndices[i] << ". Adding some noise to maintain filter stability.\n";
-        }
+        FB_DEBUG("WARNING: measurement had very small error covariance for index " <<
+                 updateIndices[i] <<
+                 ". Adding some noise to maintain filter stability.\n");
       }
     }
 
@@ -228,23 +210,16 @@ namespace RobotLocalization
       stateToMeasurementSubset(i, updateIndices[i]) = 1;
     }
 
-    if (getDebug())
-    {
-      *debugStream_ << "Current state subset is:\n";
-      *debugStream_ << stateSubset << "\n";
-      *debugStream_ << "Measurement subset is:\n";
-      *debugStream_ << measurementSubset << "\n";
-      *debugStream_ << "Measurement covariance subset is:\n";
-      *debugStream_ << measurementCovarianceSubset << "\n";
-      *debugStream_ << "State-to-measurement subset is:\n";
-      *debugStream_ << stateToMeasurementSubset << "\n";
-    }
+    FB_DEBUG("Current state subset is:\n" << stateSubset <<
+             "\nMeasurement subset is:\n" << measurementSubset <<
+             "\nMeasurement covariance subset is:\n" << measurementCovarianceSubset <<
+             "\nState-to-measurement subset is:\n" << stateToMeasurementSubset << "\n");
 
     // (1) Generate sigma points, use them to generate a predicted measurement
     for(size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
     {
       sigmaPointMeasurements[sigmaInd] = stateToMeasurementSubset * sigmaPoints_[sigmaInd];
-      predictedMeasurement += stateWeights_[sigmaInd] * sigmaPointMeasurements[sigmaInd];
+      predictedMeasurement.noalias() += stateWeights_[sigmaInd] * sigmaPointMeasurements[sigmaInd];
     }
 
     // (2) Use the sigma point measurements and predicted measurement to compute a predicted
@@ -252,12 +227,12 @@ namespace RobotLocalization
     for(size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
     {
       sigmaDiff = sigmaPointMeasurements[sigmaInd] - predictedMeasurement;
-      predictedMeasCovar += covarWeights_[sigmaInd] * (sigmaDiff * sigmaDiff.transpose());
-      crossCovar += covarWeights_[sigmaInd] * ((sigmaPoints_[sigmaInd] - state_) * sigmaDiff.transpose());
+      predictedMeasCovar.noalias() += covarWeights_[sigmaInd] * (sigmaDiff * sigmaDiff.transpose());
+      crossCovar.noalias() += covarWeights_[sigmaInd] * ((sigmaPoints_[sigmaInd] - state_) * sigmaDiff.transpose());
     }
 
     // (3) Compute the Kalman gain, making sure to use the actual measurement covariance: K = P_xz * (P_zz + R)^-1
-    Eigen::MatrixXd invInnovCov  = (predictedMeasCovar + measurementCovarianceSubset).inverse();
+    Eigen::MatrixXd invInnovCov = (predictedMeasCovar + measurementCovarianceSubset).inverse();
     kalmanGainSubset = crossCovar * invInnovCov;
 
     // (4) Apply the gain to the difference between the actual and predicted measurements: x = x + K(z - z_hat)
@@ -271,64 +246,47 @@ namespace RobotLocalization
       {
         if (updateIndices[i] == StateMemberRoll || updateIndices[i] == StateMemberPitch || updateIndices[i] == StateMemberYaw)
         {
-          if (innovationSubset(i) < -pi_)
+          while (innovationSubset(i) < -PI)
           {
-            innovationSubset(i) += tau_;
+            innovationSubset(i) += TAU;
           }
-          else if (innovationSubset(i) > pi_)
+
+          while (innovationSubset(i) > PI)
           {
-            innovationSubset(i) -= tau_;
+            innovationSubset(i) -= TAU;
           }
         }
       }
 
-      state_ = state_ + kalmanGainSubset * innovationSubset;
+      state_.noalias() += kalmanGainSubset * innovationSubset;
 
       // (6) Compute the new estimate error covariance P = P - (K * P_zz * K')
-      estimateErrorCovariance_ = estimateErrorCovariance_.eval() - (kalmanGainSubset * predictedMeasCovar * kalmanGainSubset.transpose());
+      estimateErrorCovariance_.noalias() -= (kalmanGainSubset * predictedMeasCovar * kalmanGainSubset.transpose());
 
       wrapStateAngles();
 
       // Mark that we need to re-compute sigma points for successive corrections
       uncorrected_ = false;
 
-      if (getDebug())
-      {
-        *debugStream_ << "Predicated measurement covariance is:\n";
-        *debugStream_ << predictedMeasCovar << "\n";
-        *debugStream_ << "Cross covariance is:\n";
-        *debugStream_ << crossCovar << "\n";
-        *debugStream_ << "Kalman gain subset is:\n";
-        *debugStream_ << kalmanGainSubset << "\n";
-        *debugStream_ << "Innovation:\n";
-        *debugStream_ << innovationSubset << "\n\n";
-        *debugStream_ << "Corrected full state is:\n";
-        *debugStream_ << state_ << "\n";
-        *debugStream_ << "Corrected full estimate error covariance is:\n";
-        *debugStream_ << estimateErrorCovariance_ << "\n";
-        *debugStream_ << "\n---------------------- /Ukf::correct ----------------------\n";
-      }
+      FB_DEBUG("Predicated measurement covariance is:\n" << predictedMeasCovar <<
+               "\nCross covariance is:\n" << crossCovar <<
+               "\nKalman gain subset is:\n" << kalmanGainSubset <<
+               "\nInnovation:\n" << innovationSubset <<
+               "\nCorrected full state is:\n" << state_ <<
+               "\nCorrected full estimate error covariance is:\n" << estimateErrorCovariance_ <<
+               "\n\n---------------------- /Ukf::correct ----------------------\n");
     }
   }
 
   void Ukf::predict(const double delta)
   {
-    if (getDebug())
-    {
-      *debugStream_ << "---------------------- Ukf::predict ----------------------\n";
-      *debugStream_ << "delta is " << delta << "\n";
-      *debugStream_ << "state is " << state_ << "\n";
-    }
+    FB_DEBUG("---------------------- Ukf::predict ----------------------\n" <<
+             "delta is " << delta <<
+             "\nstate is " << state_ << "\n");
 
     double roll = state_(StateMemberRoll);
     double pitch = state_(StateMemberPitch);
     double yaw = state_(StateMemberYaw);
-    double xVel = state_(StateMemberVx);
-    double yVel = state_(StateMemberVy);
-    double zVel = state_(StateMemberVz);
-    double xAcc = state_(StateMemberAx);
-    double yAcc = state_(StateMemberAy);
-    double zAcc = state_(StateMemberAz);
 
     // We'll need these trig calculations a lot.
     double cr = cos(roll);
@@ -357,9 +315,15 @@ namespace RobotLocalization
     transferFunction_(StateMemberZ, StateMemberAx) = 0.5 * transferFunction_(StateMemberZ, StateMemberVx) * delta;
     transferFunction_(StateMemberZ, StateMemberAy) = 0.5 * transferFunction_(StateMemberZ, StateMemberVy) * delta;
     transferFunction_(StateMemberZ, StateMemberAz) = 0.5 * transferFunction_(StateMemberZ, StateMemberVz) * delta;
-    transferFunction_(StateMemberRoll, StateMemberVroll) = delta;
-    transferFunction_(StateMemberPitch, StateMemberVpitch) = delta;
-    transferFunction_(StateMemberYaw, StateMemberVyaw) = delta;
+    transferFunction_(StateMemberRoll, StateMemberVroll) = transferFunction_(StateMemberX, StateMemberVx);
+    transferFunction_(StateMemberRoll, StateMemberVpitch) = transferFunction_(StateMemberX, StateMemberVy);
+    transferFunction_(StateMemberRoll, StateMemberVyaw) = transferFunction_(StateMemberX, StateMemberVz);
+    transferFunction_(StateMemberPitch, StateMemberVroll) = transferFunction_(StateMemberY, StateMemberVx);
+    transferFunction_(StateMemberPitch, StateMemberVpitch) = transferFunction_(StateMemberY, StateMemberVy);
+    transferFunction_(StateMemberPitch, StateMemberVyaw) = transferFunction_(StateMemberY, StateMemberVz);
+    transferFunction_(StateMemberYaw, StateMemberVroll) = transferFunction_(StateMemberZ, StateMemberVx);
+    transferFunction_(StateMemberYaw, StateMemberVpitch) = transferFunction_(StateMemberZ, StateMemberVy);
+    transferFunction_(StateMemberYaw, StateMemberVyaw) = transferFunction_(StateMemberZ, StateMemberVz);
     transferFunction_(StateMemberVx, StateMemberAx) = delta;
     transferFunction_(StateMemberVy, StateMemberAy) = delta;
     transferFunction_(StateMemberVz, StateMemberAz) = delta;
@@ -385,7 +349,7 @@ namespace RobotLocalization
     state_.setZero();
     for(size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
     {
-      state_ += stateWeights_[sigmaInd] * sigmaPoints_[sigmaInd];
+      state_.noalias() += stateWeights_[sigmaInd] * sigmaPoints_[sigmaInd];
     }
 
     // (4) Now us the sigma points and the predicted state to compute a predicted covariance
@@ -394,12 +358,12 @@ namespace RobotLocalization
     for(size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
     {
       sigmaDiff = (sigmaPoints_[sigmaInd] - state_);
-      estimateErrorCovariance_ += covarWeights_[sigmaInd] * (sigmaDiff * sigmaDiff.transpose());
+      estimateErrorCovariance_.noalias() += covarWeights_[sigmaInd] * (sigmaDiff * sigmaDiff.transpose());
     }
 
     // (5) Not strictly in the theoretical UKF formulation, but necessary here
     // to ensure that we actually incorporate the processNoiseCovariance_
-    estimateErrorCovariance_ += delta * processNoiseCovariance_;
+    estimateErrorCovariance_.noalias() += delta * processNoiseCovariance_;
 
     // Keep the angles bounded
     wrapStateAngles();
@@ -407,14 +371,9 @@ namespace RobotLocalization
     // Mark that we can keep these sigma points
     uncorrected_ = true;
 
-    if (getDebug())
-    {
-      *debugStream_ << "Predicted state is:\n";
-      *debugStream_ << state_ << "\n";
-      *debugStream_ << "Predicted estimate error covariance is:\n";
-      *debugStream_ << estimateErrorCovariance_ << "\n";
-      *debugStream_ << "\n--------------------- /Ukf::predict ----------------------\n";
-    }
+    FB_DEBUG("Predicted state is:\n" << state_ <<
+             "\nPredicted estimate error covariance is:\n" << estimateErrorCovariance_ <<
+             "\n\n--------------------- /Ukf::predict ----------------------\n");
   }
 
 }
