@@ -1,3 +1,24 @@
+## robot_localization (jade) - 2.2.0-0
+
+The packages in the `robot_localization` repository were released into the `jade` distro by running `/usr/local/bin/bloom-release robot_localization --track jade --rosdistro jade --new-track` on `Sat, 23 May 2015 12:56:40 -0000`
+
+The `robot_localization` package was released.
+
+Version of package(s) in repository `robot_localization`:
+- upstream repository: https://github.com/cra-ros-pkg/robot_localization.git
+- release repository: unknown
+- rosdistro version: `null`
+- old version: `null`
+- new version: `2.2.0-0`
+
+Versions of tools used:
+- bloom version: `0.5.20`
+- catkin_pkg version: `0.2.8`
+- rosdep version: `0.11.2`
+- rosdistro version: `0.4.2`
+- vcstools version: `0.1.36`
+
+
 ## robot_localization (indigo) - 2.2.0-0
 
 The packages in the `robot_localization` repository were released into the `indigo` distro by running `/usr/local/bin/bloom-release robot_localization --track indigo --rosdistro indigo --edit` on `Sat, 23 May 2015 00:34:35 -0000`
