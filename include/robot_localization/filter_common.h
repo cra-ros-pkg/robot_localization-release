@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Charles River Analytics, Inc.
+ * Copyright (c) 2015, Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -73,6 +73,10 @@ namespace RobotLocalization
   const int POSITION_SIZE = 3;
   const int ORIENTATION_SIZE = 3;
   const int ACCELERATION_SIZE = 3;
+
+  //! @brief Common variables
+  const double PI = 3.141592653589793;
+  const double TAU = 6.283185307179587;
 }
 
 #endif

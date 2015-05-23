@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Charles River Analytics, Inc.
+ * Copyright (c) 2015, Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,8 +30,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "robot_localization/filter_base.h"
 #include "robot_localization/filter_common.h"
-#include "robot_localization/ekf.h"
 
 #include <sstream>
 #include <iomanip>
@@ -49,8 +49,6 @@ namespace RobotLocalization
     covarianceEpsilon_(STATE_SIZE, STATE_SIZE),
     processNoiseCovariance_(STATE_SIZE, STATE_SIZE),
     identity_(STATE_SIZE, STATE_SIZE),
-    pi_(3.141592653589793),
-    tau_(6.283185307179586),
     debug_(false),
     debugStream_(NULL)
   {
@@ -67,10 +65,11 @@ namespace RobotLocalization
     // Clear the Jacobian
     transferFunctionJacobian_.setZero();
 
-    // Set the estimate error covariance. It should be small,
-    // as we're fairly certain of our initial state
+    // Set the estimate error covariance. We want our measurements
+    // to be accepted rapidly when the filter starts, so we should
+    // initialize the state's covariance with large values.
     estimateErrorCovariance_.setIdentity();
-    estimateErrorCovariance_ *= 1e-6;
+    estimateErrorCovariance_ *= 1e-9;
 
     // We need the identity for the update equations
     identity_.setIdentity();
@@ -158,10 +157,7 @@ namespace RobotLocalization
 
   void FilterBase::processMeasurement(const Measurement &measurement)
   {
-    if (debug_)
-    {
-      *debugStream_ << "------ FilterBase::processMeasurement ------\n";
-    }
+    FB_DEBUG("------ FilterBase::processMeasurement (" << measurement.topicName_ << ") ------\n");
 
     double delta = 0.0;
 
@@ -173,12 +169,9 @@ namespace RobotLocalization
       // Determine how much time has passed since our last measurement
       delta = measurement.time_ - lastMeasurementTime_;
 
-      if (debug_)
-      {
-        *debugStream_ << "Filter is already initialized. Carrying out predict/correct loop...\n";
-        *debugStream_ << "Measurement time is " << std::setprecision(20) << measurement.time_ <<
-                         ", last measurement time is " << lastMeasurementTime_ << ", delta is " << delta << "\n";
-      }
+      FB_DEBUG("Filter is already initialized. Carrying out predict/correct loop...\n"
+               "Measurement time is " << std::setprecision(20) << measurement.time_ <<
+               ", last measurement time is " << lastMeasurementTime_ << ", delta is " << delta << "\n");
 
       // Only want to carry out a prediction if it's
       // forward in time. Otherwise, just correct.
@@ -196,10 +189,7 @@ namespace RobotLocalization
     }
     else
     {
-      if (debug_)
-      {
-        *debugStream_ << "First measurement. Initializing filter.\n";
-      }
+      FB_DEBUG("First measurement. Initializing filter.\n");
 
       // Initialize the filter, but only with the values we're using
       size_t measurementLength = measurement.updateVector_.size();
@@ -234,10 +224,7 @@ namespace RobotLocalization
       lastMeasurementTime_ = measurement.time_;
     }
 
-    if (debug_)
-    {
-      *debugStream_ << "\n----- /FilterBase::processMeasurement ------\n";
-    }
+    FB_DEBUG("------ /FilterBase::processMeasurement (" << measurement.topicName_ << ") ------\n");
   }
 
   void FilterBase::setDebug(const bool debug, std::ostream *outStream)
@@ -295,10 +282,7 @@ namespace RobotLocalization
     // This handles issues with ROS time when use_sim_time is on and we're playing from bags.
     if (delta > 100000.0)
     {
-      if (debug_)
-      {
-        *debugStream_ << "Delta was very large. Suspect playing from bag file. Setting to 0.01\n";
-      }
+      FB_DEBUG("Delta was very large. Suspect playing from bag file. Setting to 0.01\n");
 
       delta = 0.01;
     }
@@ -306,32 +290,9 @@ namespace RobotLocalization
 
   void FilterBase::wrapStateAngles()
   {
-    while (state_(StateMemberRoll) < -pi_)
-    {
-      state_(StateMemberRoll) += tau_;
-    }
-    while (state_(StateMemberRoll) > pi_)
-    {
-      state_(StateMemberRoll) -= tau_;
-    }
-
-    while (state_(StateMemberPitch) < -pi_)
-    {
-      state_(StateMemberPitch) += tau_;
-    }
-    while (state_(StateMemberPitch) > pi_)
-    {
-      state_(StateMemberPitch) -= tau_;
-    }
-
-    while (state_(StateMemberYaw) < -pi_)
-    {
-      state_(StateMemberYaw) += tau_;
-    }
-    while (state_(StateMemberYaw) > pi_)
-    {
-      state_(StateMemberYaw) -= tau_;
-    }
+    state_(StateMemberRoll)  = FilterUtilities::clampRotation(state_(StateMemberRoll));
+    state_(StateMemberPitch) = FilterUtilities::clampRotation(state_(StateMemberPitch));
+    state_(StateMemberYaw)   = FilterUtilities::clampRotation(state_(StateMemberYaw));
   }
 
   bool FilterBase::checkMahalanobisThreshold(const Eigen::VectorXd &innovation,
@@ -339,92 +300,18 @@ namespace RobotLocalization
                                              const double nsigmas)
   {
     double sqMahalanobis = innovation.dot(invCovariance * innovation);
-    double threshold = nsigmas*nsigmas;
+    double threshold = nsigmas * nsigmas;
 
     if (sqMahalanobis >= threshold)
     {
-      if (getDebug())
-      {
-        *debugStream_ << "Innovation mahalanobis distance test failed. Squared Mahalanobis is\n";
-        *debugStream_ << sqMahalanobis << "\n";
-        *debugStream_ << "threshold was:\n";
-        *debugStream_ << threshold << "\n";
-        *debugStream_ << "Innovation:\n";
-        *debugStream_ << innovation << "\n";
-        *debugStream_ << "Inv covariance:\n";
-        *debugStream_ << invCovariance << "\n";
-      }
+      FB_DEBUG("Innovation mahalanobis distance test failed. Squared Mahalanobis is: " << sqMahalanobis << "\n" <<
+               "Threshold is: " << threshold << "\n" <<
+               "Innovation is: " << innovation << "\n" <<
+               "Innovation covariance is:\n" << invCovariance << "\n");
+
       return false;
     }
 
     return true;
   }
 }
-
-
-
-std::ostream& operator<<(std::ostream& os, const Eigen::MatrixXd &mat)
-{
-  os << "[";
-
-  int rowCount = static_cast<int>(mat.rows());
-
-  for (int row = 0; row < rowCount; ++row)
-  {
-    if (row > 0)
-    {
-      os << " ";
-    }
-
-    for (int col = 0; col < mat.cols(); ++col)
-    {
-      os << std::setiosflags(std::ios::left) << std::setw(12) << std::setprecision(5) << mat(row, col);
-    }
-
-    if (row < rowCount - 1)
-    {
-      os << "\n";
-    }
-  }
-
-  os << "]\n";
-
-  return os;
-}
-
-std::ostream& operator<<(std::ostream& os, const Eigen::VectorXd &vec)
-{
-  os << "[";
-  for (int dim = 0; dim < vec.rows(); ++dim)
-  {
-    os << std::setiosflags(std::ios::left) << std::setw(12) << std::setprecision(5) << vec(dim);
-  }
-  os << "]\n";
-
-  return os;
-}
-
-std::ostream& operator<<(std::ostream& os, const std::vector<size_t> &vec)
-{
-  os << "[";
-  for (size_t dim = 0; dim < vec.size(); ++dim)
-  {
-    os << std::setiosflags(std::ios::left) << std::setw(12) << std::setprecision(5) << vec[dim];
-  }
-  os << "]\n";
-
-  return os;
-}
-
-std::ostream& operator<<(std::ostream& os, const std::vector<int> &vec)
-{
-  os << "[";
-  for (size_t dim = 0; dim < vec.size(); ++dim)
-  {
-    os << std::setiosflags(std::ios::left) << std::setw(12) << (vec[dim] ? "true " : "false");
-  }
-  os << "]\n";
-
-  return os;
-}
-
