@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Charles River Analytics, Inc.
+ * Copyright (c) 2015, Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -69,14 +69,6 @@ namespace RobotLocalization
       //!
       double magneticDeclination_;
 
-      //! @brief Stores the roll we need to compute the transform
-      //!
-      double utmOdomTfRoll_;
-
-      //! @brief Stores the pitch we need to compute the transform
-      //!
-      double utmOdomTfPitch_;
-
       //! @brief Stores the yaw we need to compute the transform
       //!
       double utmOdomTfYaw_;
@@ -104,6 +96,13 @@ namespace RobotLocalization
       //!
       bool gpsUpdated_;
 
+      //! @brief Whether or not we have new odometry data
+      //!
+      //! If we're creating filtered GPS messages, then we only
+      //! want to broadcast them when new odometry data arrives.
+      //!
+      bool odomUpdated_;
+
       //! @brief Timestamp of the latest good GPS message
       //!
       //! We assign this value to the timestamp of the odometry
@@ -111,19 +110,12 @@ namespace RobotLocalization
       //!
       ros::Time gpsUpdateTime_;
 
-      //! @brief IMU's roll offset
+      //! @brief Timestamp of the latest good odometry message
       //!
-      //! On level ground, your IMU should read 0 roll. If it
-      //! doesn't, this (parameterized) value gives the offset
+      //! We assign this value to the timestamp of the odometry
+      //! message that we output
       //!
-      double rollOffset_;
-
-      //! @brief IMU's pitch offset
-      //!
-      //! On level ground, your IMU should read 0 pitch. If it
-      //! doesn't, this (parameterized) value gives the offset
-      //!
-      double pitchOffset_;
+      ros::Time odomUpdateTime_;
 
       //! @brief IMU's yaw offset
       //!
@@ -140,11 +132,23 @@ namespace RobotLocalization
       //!
       bool zeroAltitude_;
 
+      //! @brief Whether or not we publish filtered GPS messages
+      //!
+      bool publishGps_;
+
+      //! @brief Whether we get the transform's yaw from the odometry or IMU source
+      //!
+      bool useOdometryYaw_;
+
       //! @brief Frame ID of the GPS odometry output
       //!
       //! This will just match whatever your odometry message has
       //!
       std::string worldFrameId_;
+
+      //! @brief UTM zone as determined after transforming GPS message
+      //!
+      std::string utmZone_;
 
       //! @brief Latest odometry data
       //!
@@ -158,13 +162,21 @@ namespace RobotLocalization
       //!
       tf::Quaternion latestOrientation_;
 
-      //! @brief Covariane for most recent GPS/UTM data
+      //! @brief Covariance for most recent GPS/UTM data
       //!
       Eigen::MatrixXd latestUtmCovariance_;
+
+      //! @brief Covariance for most recent odometry data
+      //!
+      Eigen::MatrixXd latestOdomCovariance_;
 
       //! @brief Holds the UTM->odom transform
       //!
       tf::Transform utmWorldTransform_;
+
+      //! @brief Holds the odom->UTM transform for filtered GPS broadcast
+      //!
+      tf::Transform utmWorldTransInverse_;
 
       //! @brief Callback for the odom data
       //!
@@ -186,5 +198,9 @@ namespace RobotLocalization
       //! @brief Prepares the GPS odometry message before sending
       //!
       bool prepareGpsOdometry(nav_msgs::Odometry &gpsOdom);
+
+      //! @brief Converts the odometry data back to GPS and broadcasts it
+      //!
+      bool prepareFilteredGps(sensor_msgs::NavSatFix &filteredGps);
   };
 }
