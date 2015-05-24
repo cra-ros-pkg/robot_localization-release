@@ -30,13 +30,18 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "robot_localization/SetDatum.h"
+
 #include <ros/ros.h>
 
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/NavSatFix.h>
 
-#include <tf/transform_datatypes.h>
+#include <tf2/LinearMath/Transform.h>
+#include <tf2_ros/static_transform_broadcaster.h>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
 
 #include <Eigen/Dense>
 
@@ -75,15 +80,15 @@ namespace RobotLocalization
 
       //! @brief Whether or not the GPS fix is usable
       //!
-      bool hasGps_;
+      bool hasTransformGps_;
 
       //! @brief Signifies that we have an odometry message
       //!
-      bool hasOdom_;
+      bool hasTransformOdom_;
 
       //! @brief Signifies that we have received an IMU message
       //!
-      bool hasImu_;
+      bool hasTransformImu_;
 
       //! @brief Whether or not we've computed a good heading
       //!
@@ -140,6 +145,18 @@ namespace RobotLocalization
       //!
       bool useOdometryYaw_;
 
+      //! @brief Whether we get our datum from the first GPS message or from the set_datum
+      //! service/parameter
+      //!
+      bool useManualDatum_;
+
+      //! @brief Frame ID of the robot's body frame
+      //!
+      //! This is needed for obtaining transforms from the robot's body
+      //! frame to the frames of sensors (IMU and GPS)
+      //!
+      std::string baseLinkFrameId_;
+
       //! @brief Frame ID of the GPS odometry output
       //!
       //! This will just match whatever your odometry message has
@@ -152,15 +169,23 @@ namespace RobotLocalization
 
       //! @brief Latest odometry data
       //!
-      tf::Pose latestWorldPose_;
+      tf2::Transform latestWorldPose_;
 
       //! @brief Latest GPS data, stored as UTM coords
       //!
-      tf::Pose latestUtmPose_;
+      tf2::Transform latestUtmPose_;
+
+      //! @brief Holds the UTM pose that is used to compute the transform
+      //!
+      tf2::Transform transformUtmPose_;
 
       //! @brief Latest IMU orientation
       //!
-      tf::Quaternion latestOrientation_;
+      tf2::Transform transformWorldPose_;
+
+      //! @brief Latest IMU orientation
+      //!
+      tf2::Quaternion transformOrientation_;
 
       //! @brief Covariance for most recent GPS/UTM data
       //!
@@ -170,13 +195,30 @@ namespace RobotLocalization
       //!
       Eigen::MatrixXd latestOdomCovariance_;
 
+      //! @brief Transform buffer for managing coordinate transforms
+      //!
+      tf2_ros::Buffer tfBuffer_;
+
+      //! @brief Transform listener for receiving transforms
+      //!
+      tf2_ros::TransformListener tfListener_;
+
+      //! @brief Used for publishing the static world_frame->utm transform
+      //!
+      tf2_ros::StaticTransformBroadcaster utmBroadcaster_;
+
       //! @brief Holds the UTM->odom transform
       //!
-      tf::Transform utmWorldTransform_;
+      tf2::Transform utmWorldTransform_;
 
       //! @brief Holds the odom->UTM transform for filtered GPS broadcast
       //!
-      tf::Transform utmWorldTransInverse_;
+      tf2::Transform utmWorldTransInverse_;
+
+      //! @brief Callback for the datum service
+      //!
+      bool datumCallback(robot_localization::SetDatum::Request& request,
+                         robot_localization::SetDatum::Response&);
 
       //! @brief Callback for the odom data
       //!
@@ -202,5 +244,15 @@ namespace RobotLocalization
       //! @brief Converts the odometry data back to GPS and broadcasts it
       //!
       bool prepareFilteredGps(sensor_msgs::NavSatFix &filteredGps);
+
+      //! @brief Used for setting the GPS data that will be used to compute
+      //! the transform
+      //!
+      void setTransformGps(const sensor_msgs::NavSatFixConstPtr& msg);
+
+      //! @brief Used for setting the GPS data that will be used to compute
+      //! the transform
+      //!
+      void setTransformOdometry(const nav_msgs::OdometryConstPtr& msg);
   };
 }
