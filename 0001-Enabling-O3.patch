@@ -1,0 +1,25 @@
+From 112fa51f610b9b0d29cbac9eca9ac659330e1abf Mon Sep 17 00:00:00 2001
+From: Tom Moore <ayrton04@gmail.com>
+Date: Sat, 23 May 2015 20:48:26 -0400
+Subject: [PATCH] Enabling O3
+
+---
+ debian/rules.em | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/debian/rules.em b/debian/rules.em
+index 991c991..02edf45 100755
+--- a/debian/rules.em
++++ b/debian/rules.em
+@@ -17,7 +17,7 @@ export LDFLAGS=
+ export PKG_CONFIG_PATH=@(InstallationPrefix)/lib/pkgconfig
+ # Explicitly enable -DNDEBUG, see:
+ # 	https://github.com/ros-infrastructure/bloom/issues/327
+-export DEB_CXXFLAGS_MAINT_APPEND=-DNDEBUG
++export DEB_CXXFLAGS_MAINT_APPEND=-DNDEBUG -O3
+ 
+ %:
+ 	dh  $@@
+-- 
+2.3.2 (Apple Git-55)
+
