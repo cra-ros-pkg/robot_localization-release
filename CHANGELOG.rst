@@ -2,17 +2,14 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.2.0 (2015-05-22)
+1.2.0 (2015-05-22)
 ------------------
-* Added tf2-friendly tf_prefix appending
-* Corrected for IMU orientation in navsat_transform
 * Fixed issue with out-of-order measurements and pose resets
 * Nodes now assume ENU standard for yaw data
 * Removed gps_common dependency
 * Adding option to navsat_transform_node that enables the use of the heading from the odometry message instead of an IMU.
 * Changed frame_id used in setPoseCallback to be the world_frame
 * Optimized Eigen arithmetic for signficiant performance boost
-* Migrated to tf2
 * Code refactoring and reorganization
 * Removed roll and pitch from navsat_transform calculations
 * Fixed transform for IMU data to better support mounting IMUs in non-standard orientations
@@ -29,7 +26,7 @@ Changelog for package robot_localization
 * Changed the way differential measurements are handled
 * Added diagnostics
 
-2.1.7 (2015-01-05)
+1.1.7 (2015-01-05)
 ------------------
 * Added some checks to eliminate unnecessary callbacks
 * Updated launch file templates
@@ -38,14 +35,14 @@ Changelog for package robot_localization
 * Added optional broadcast of world_frame->utm transform for navsat_transform_node
 * Bug fixes for differential mode and handling of Z acceleration in 2D mode
 
-2.1.6 (2014-11-06)
+1.1.6 (2014-11-06)
 ------------------
 * Added unscented Kalman filter (UKF) localization node
 * Fixed map->odom tf calculation
 * Acceleration data from IMUs is now used in computing the state estimate
 * Added 2D mode
 
-2.1.5 (2014-10-07)
+1.1.5 (2014-10-07)
 ------------------
 * Changed initial estimate error covariance to be much smaller
 * Fixed some debug output
@@ -55,11 +52,11 @@ Changelog for package robot_localization
 * Implemented message filters
 * Added navsat_transform_node
 
-2.1.4 (2014-08-22)
+1.1.4 (2014-08-22)
 ------------------
 * Adding utm_transform_node to install targets
 
-2.1.3 (2014-06-22)
+1.1.3 (2014-06-22)
 ------------------
 * Some changes to ease GPS integration
 * Addition of differential integration of pose data
@@ -67,12 +64,12 @@ Changelog for package robot_localization
 * Added UTM transform node and launch file
 * Bug fixes
 
-2.1.2 (2014-04-11)
+1.1.2 (2014-04-11)
 ------------------
 * Updated covariance correction formulation to "Joseph form" to improve filter stability.
 * Implemented new versioning scheme.
 
-2.1.1 (2014-04-11)
+1.1.1 (2014-04-11)
 ------------------
 * Added cmake_modules dependency for Eigen support, and added include to silence boost::signals warning from tf include
 

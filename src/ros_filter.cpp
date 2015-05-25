@@ -35,14 +35,11 @@
 #include "robot_localization/ekf.h"
 #include "robot_localization/ukf.h"
 
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-
 namespace RobotLocalization
 {
   template<typename T>
   RosFilter<T>::RosFilter(std::vector<double> args) :
       staticDiagErrorLevel_(diagnostic_msgs::DiagnosticStatus::OK),
-      tfListener_(tfBuffer_),
       dynamicDiagErrorLevel_(diagnostic_msgs::DiagnosticStatus::OK),
       filter_(args),
       frequency_(30.0),
@@ -214,7 +211,7 @@ namespace RobotLocalization
 
       // Convert from roll, pitch, and yaw back to quaternion for
       // orientation values
-      tf2::Quaternion quat;
+      tf::Quaternion quat;
       quat.setRPY(state(StateMemberRoll), state(StateMemberPitch), state(StateMemberYaw));
 
       // Fill out the message
@@ -439,6 +436,14 @@ namespace RobotLocalization
       }
     }
 
+    // Try to resolve the tf_prefix
+    nh_.param("/tf_prefix", tfPrefix_, std::string(""));
+
+    if (tfPrefix_.empty())
+    {
+      nh_.param("tf_prefix", tfPrefix_, std::string(""));
+    }
+
     // These params specify the name of the robot's body frame (typically
     // base_link) and odometry frame (typically odom)
     nhLocal_.param("map_frame", mapFrameId_, std::string("map"));
@@ -477,21 +482,26 @@ namespace RobotLocalization
                    mapFrameId_ == baseLinkFrameId_,
                    "Invalid frame configuration! The values for map_frame, odom_frame, and base_link_frame must be unique");
 
-    // Try to resolve tf_prefix
-    std::string tfPrefix = "";
-    std::string tfPrefixPath = "";
-    if (nhLocal_.searchParam("tf_prefix", tfPrefixPath))
+    // Append tf_prefix if it's specified (@todo: tf2 migration)
+    if (!tfPrefix_.empty() && baseLinkFrameId_.at(0) != '/')
     {
-      nhLocal_.getParam(tfPrefixPath, tfPrefix);
+      if(mapFrameId_.at(0) != '/')
+      {
+        mapFrameId_ = "/" + tfPrefix_ + "/" + mapFrameId_;
+      }
+
+      if(odomFrameId_.at(0) != '/')
+      {
+        odomFrameId_ = "/" + tfPrefix_ + "/" + odomFrameId_;
+      }
+
+      if(baseLinkFrameId_.at(0) != '/')
+      {
+        baseLinkFrameId_ = "/" + tfPrefix_ + "/" + baseLinkFrameId_;
+      }
     }
 
-    // Append the tf prefix in a tf2-friendly manner
-    FilterUtilities::appendPrefix(tfPrefix, mapFrameId_);
-    FilterUtilities::appendPrefix(tfPrefix, odomFrameId_);
-    FilterUtilities::appendPrefix(tfPrefix, baseLinkFrameId_);
-    FilterUtilities::appendPrefix(tfPrefix, worldFrameId_);
-
-    // Transform future dating
+    // Transform future (or past) dating
     double offsetTmp;
     nhLocal_.param("transform_time_offset", offsetTmp, 0.0);
     tfTimeOffset_.fromSec(offsetTmp);
@@ -506,7 +516,7 @@ namespace RobotLocalization
     nhLocal_.param("two_d_mode", twoDMode_, false);
 
     // Debugging writes to file
-    RF_DEBUG("tf_prefix is " << tfPrefix <<
+    RF_DEBUG("tf_prefix is " << tfPrefix_ <<
              "\nmap_frame is " << mapFrameId_ <<
              "\nodom_frame is " << odomFrameId_ <<
              "\nbase_link_frame is " << baseLinkFrameId_ <<
@@ -603,7 +613,7 @@ namespace RobotLocalization
 
         if(poseUpdateSum > 0)
         {
-          poseMFPtr poseFilPtr(new tf2_ros::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(tfBuffer_, worldFrameId_, odomQueueSize, nh_));
+          poseMFPtr poseFilPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(tfListener_, worldFrameId_, odomQueueSize));
           std::string odomPoseTopicName = odomTopicName + "_pose";
           poseFilPtr->registerCallback(boost::bind(&RosFilter<T>::poseCallback, this, _1, odomPoseTopicName, worldFrameId_, poseUpdateVec, differential, relative, false, poseMahalanobisThresh));
           poseFilPtr->registerFailureCallback(boost::bind(&RosFilter<T>::transformPoseFailureCallback, this, _1, _2, odomTopicName, worldFrameId_));
@@ -631,7 +641,7 @@ namespace RobotLocalization
 
         if(twistUpdateSum > 0)
         {
-          twistMFPtr twistFilPtr(new tf2_ros::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(tfBuffer_, baseLinkFrameId_, odomQueueSize, nh_));
+          twistMFPtr twistFilPtr(new tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(tfListener_, baseLinkFrameId_, odomQueueSize));
           std::string odomTwistTopicName = odomTopicName + "_twist";
           twistFilPtr->registerCallback(boost::bind(&RosFilter<T>::twistCallback, this, _1, odomTwistTopicName, baseLinkFrameId_, twistUpdateVec, twistMahalanobisThresh));
           twistFilPtr->registerFailureCallback(boost::bind(&RosFilter<T>::transformTwistFailureCallback, this, _1, _2, odomTopicName, baseLinkFrameId_));
@@ -696,7 +706,7 @@ namespace RobotLocalization
           // Create and store message filter subscriber objects and message filters
           poseMFSubPtr subPtr(new message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped>());
           subPtr->subscribe(nh_, poseTopic, poseQueueSize);
-          poseMFPtr filPtr(new tf2_ros::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(*subPtr, tfBuffer_, worldFrameId_, poseQueueSize, nh_));
+          poseMFPtr filPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(*subPtr, tfListener_, worldFrameId_, poseQueueSize));
           filPtr->registerCallback(boost::bind(&RosFilter<T>::poseCallback, this, _1, poseTopicName, worldFrameId_, poseUpdateVec, differential, relative, false, poseMahalanobisThresh));
           filPtr->registerFailureCallback(boost::bind(&RosFilter<T>::transformPoseFailureCallback, this, _1, _2, poseTopicName, worldFrameId_));
           poseTopicSubs_.push_back(subPtr);
@@ -767,7 +777,7 @@ namespace RobotLocalization
           // Create and store subscriptions and message filters
           twistMFSubPtr subPtr(new message_filters::Subscriber<geometry_msgs::TwistWithCovarianceStamped>());
           subPtr->subscribe(nh_, twistTopic, twistQueueSize);
-          twistMFPtr filPtr(new tf2_ros::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(*subPtr, tfBuffer_, baseLinkFrameId_, twistQueueSize, nh_));
+          twistMFPtr filPtr(new tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(*subPtr, tfListener_, baseLinkFrameId_, twistQueueSize));
           filPtr->registerCallback(boost::bind(&RosFilter<T>::twistCallback, this, _1, twistTopicName, baseLinkFrameId_, twistUpdateVec, twistMahalanobisThresh));
           filPtr->registerFailureCallback(boost::bind(&RosFilter<T>::transformTwistFailureCallback, this, _1, _2, twistTopicName, baseLinkFrameId_));
           twistTopicSubs_.push_back(subPtr);
@@ -891,7 +901,7 @@ namespace RobotLocalization
         if(poseUpdateSum > 0)
         {
           // @todo: There's a lot of ambiguity with IMU frames. Should allow a parameter that specifies a target IMU frame.
-          poseMFPtr poseFilPtr(new tf2_ros::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(tfBuffer_, baseLinkFrameId_, imuQueueSize, nh_));
+          poseMFPtr poseFilPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(tfListener_, baseLinkFrameId_, imuQueueSize));
           std::string imuPoseTopicName = imuTopicName + "_pose";
           poseFilPtr->registerCallback(boost::bind(&RosFilter<T>::poseCallback, this, _1, imuPoseTopicName, baseLinkFrameId_, poseUpdateVec, differential, relative, true, poseMahalanobisThresh));
           poseFilPtr->registerFailureCallback(boost::bind(&RosFilter<T>::transformPoseFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
@@ -913,7 +923,7 @@ namespace RobotLocalization
 
         if(twistUpdateSum > 0)
         {
-          twistMFPtr twistFilPtr(new tf2_ros::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(tfBuffer_, baseLinkFrameId_, imuQueueSize, nh_));
+          twistMFPtr twistFilPtr(new tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(tfListener_, baseLinkFrameId_, imuQueueSize));
           std::string imuTwistTopicName = imuTopicName + "_twist";
           twistFilPtr->registerCallback(boost::bind(&RosFilter<T>::twistCallback, this, _1, imuTwistTopicName, baseLinkFrameId_, twistUpdateVec, twistMahalanobisThresh));
           twistFilPtr->registerFailureCallback(boost::bind(&RosFilter<T>::transformTwistFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
@@ -926,7 +936,7 @@ namespace RobotLocalization
 
         if(accelUpdateSum > 0)
         {
-          imuMFPtr accelFilPtr(new tf2_ros::MessageFilter<sensor_msgs::Imu>(tfBuffer_, baseLinkFrameId_, imuQueueSize, nh_));
+          imuMFPtr accelFilPtr(new tf::MessageFilter<sensor_msgs::Imu>(tfListener_, baseLinkFrameId_, imuQueueSize));
           std::string imuAccelTopicName = imuTopicName + "_acceleration";
           accelFilPtr->registerCallback(boost::bind(&RosFilter<T>::accelerationCallback, this, _1, imuAccelTopicName, baseLinkFrameId_, accelUpdateVec, accelMahalanobisThresh));
           accelFilPtr->registerFailureCallback(boost::bind(&RosFilter<T>::transformImuFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
@@ -1286,19 +1296,19 @@ namespace RobotLocalization
 
     // We may need to broadcast a different transform than
     // the one we've already calculated.
-    tf2::Transform mapOdomTrans;
-    tf2::Transform odomBaseLinkTrans;
+    tf::StampedTransform mapOdomTrans;
+    tf::StampedTransform odomBaseLinkTrans;
     geometry_msgs::TransformStamped mapOdomTransMsg;
     ros::Time curTime;
     ros::Time lastDiagTime = ros::Time::now();
 
     // Clear out the transforms
-    worldBaseLinkTransMsg_.transform = tf2::toMsg(tf2::Transform::getIdentity());
-    mapOdomTransMsg.transform = tf2::toMsg(tf2::Transform::getIdentity());
+    tf::transformTFToMsg(tf::Transform::getIdentity(), worldBaseLinkTransMsg_.transform);
+    tf::transformTFToMsg(tf::Transform::getIdentity(), mapOdomTransMsg.transform);
 
     // Publisher
     ros::Publisher positionPub = nh_.advertise<nav_msgs::Odometry>("odometry/filtered", 20);
-    tf2_ros::TransformBroadcaster worldTransformBroadcaster;
+    tf::TransformBroadcaster worldTransformBroadcaster;
 
     ros::Rate loop_rate(frequency_);
 
@@ -1328,11 +1338,10 @@ namespace RobotLocalization
         {
           try
           {
-            tf2::Transform worldBaseLinkTrans;
-            tf2::fromMsg(worldBaseLinkTransMsg_.transform, worldBaseLinkTrans);
+            tf::StampedTransform worldBaseLinkTrans;
+            tf::transformStampedMsgToTF(worldBaseLinkTransMsg_, worldBaseLinkTrans);
 
-            tf2::fromMsg(tfBuffer_.lookupTransform(baseLinkFrameId_, odomFrameId_, ros::Time(0)).transform,
-                         odomBaseLinkTrans);
+            tfListener_.lookupTransform(baseLinkFrameId_, odomFrameId_, ros::Time(0), odomBaseLinkTrans);
 
             /*
              * First, see these two references:
@@ -1354,7 +1363,7 @@ namespace RobotLocalization
 
             mapOdomTrans.mult(worldBaseLinkTrans, odomBaseLinkTrans);
 
-            mapOdomTransMsg.transform = tf2::toMsg(mapOdomTrans);
+            tf::transformStampedTFToMsg(mapOdomTrans, mapOdomTransMsg);
             mapOdomTransMsg.header.stamp = filteredPosition.header.stamp + tfTimeOffset_;
             mapOdomTransMsg.header.frame_id = mapFrameId_;
             mapOdomTransMsg.child_frame_id = odomFrameId_;
@@ -1468,19 +1477,19 @@ namespace RobotLocalization
   }
 
   template<typename T>
-  std::string RosFilter<T>::tfFailureReasonString(const tf2_ros::FilterFailureReason reason)
+  std::string RosFilter<T>::tfFailureReasonString(const tf::FilterFailureReason reason)
   {
     std::string retVal;
 
     switch(reason)
     {
-      case tf2_ros::filter_failure_reasons::OutTheBack:
+      case tf::filter_failure_reasons::OutTheBack:
         retVal = std::string("The timestamp on the message is more than the cache length earlier than the newest data in the transform cache");
         break;
-      case tf2_ros::filter_failure_reasons::EmptyFrameID:
+      case tf::filter_failure_reasons::EmptyFrameID:
         retVal = std::string("The message frame_id is empty");
         break;
-      case tf2_ros::filter_failure_reasons::Unknown:
+      case tf::filter_failure_reasons::Unknown:
       default:
         retVal = std::string("No transform exists from source to target frame");
         break;
@@ -1491,9 +1500,9 @@ namespace RobotLocalization
 
   template<typename T>
   void RosFilter<T>::transformImuFailureCallback(const sensor_msgs::Imu::ConstPtr &msg,
-                                                 const tf2_ros::FilterFailureReason reason,
-                                                 const std::string &topicName,
-                                                 const std::string &targetFrame)
+                                              const tf::FilterFailureReason reason,
+                                              const std::string &topicName,
+                                              const std::string &targetFrame)
   {
     std::stringstream stream;
     std::string warning;
@@ -1509,9 +1518,9 @@ namespace RobotLocalization
 
   template<typename T>
   void RosFilter<T>::transformPoseFailureCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
-                                                  const tf2_ros::FilterFailureReason reason,
-                                                  const std::string &topicName,
-                                                  const std::string &targetFrame)
+                                               const tf::FilterFailureReason reason,
+                                               const std::string &topicName,
+                                               const std::string &targetFrame)
   {
     std::stringstream stream;
     std::string warning;
@@ -1527,9 +1536,9 @@ namespace RobotLocalization
 
   template<typename T>
   void RosFilter<T>::transformTwistFailureCallback(const geometry_msgs::TwistWithCovarianceStamped::ConstPtr &msg,
-                                                   const tf2_ros::FilterFailureReason reason,
-                                                   const std::string &topicName,
-                                                   const std::string &targetFrame)
+                                                const tf::FilterFailureReason reason,
+                                                const std::string &topicName,
+                                                const std::string &targetFrame)
   {
     std::stringstream stream;
     std::string warning;
@@ -1545,10 +1554,10 @@ namespace RobotLocalization
 
   template<typename T>
   void RosFilter<T>::twistCallback(const geometry_msgs::TwistWithCovarianceStamped::ConstPtr &msg,
-                                   const std::string &topicName,
-                                   const std::string &targetFrame,
-                                   const std::vector<int> &updateVector,
-                                   const double mahalanobisThresh)
+                                const std::string &topicName,
+                                const std::string &targetFrame,
+                                const std::vector<int> &updateVector,
+                                const double mahalanobisThresh)
   {
     // If we've just reset the filter, then we want to ignore any messages
     // that arrive with an older timestamp
@@ -1651,10 +1660,6 @@ namespace RobotLocalization
       case diagnostic_msgs::DiagnosticStatus::WARN:
         wrapper.summary(maxErrLevel,
                         "Potentially erroneous data or settings detected for a robot_localization state estimation node.");
-        break;
-      case diagnostic_msgs::DiagnosticStatus::STALE:
-        wrapper.summary(maxErrLevel,
-                        "The state of the robot_localization state estimation node is stale.");
         break;
       case diagnostic_msgs::DiagnosticStatus::OK:
         wrapper.summary(maxErrLevel,
@@ -1798,6 +1803,58 @@ namespace RobotLocalization
   }
 
   template<typename T>
+  bool RosFilter<T>::lookupTransformSafe(const std::string &targetFrame,
+                                         const std::string &sourceFrame,
+                                         const ros::Time &time,
+                                         tf::StampedTransform &targetFrameTrans)
+  {
+    bool retVal = true;
+
+    // First try to transform the data at the requested time
+    try
+    {
+      tfListener_.lookupTransform(targetFrame, sourceFrame, time, targetFrameTrans);
+    }
+    catch (tf::TransformException &ex)
+    {
+      RF_DEBUG("WARNING: Could not obtain transform from " << sourceFrame <<
+               " to " << targetFrame << ". Error was " << ex.what());
+
+      // The issue might be that the transforms that are available are not close
+      // enough temporally to be used. In that case, just use the latest available
+      // transform and warn the user.
+      try
+      {
+        tfListener_.lookupTransform(targetFrame, sourceFrame, ros::Time(0), targetFrameTrans);
+
+        ROS_WARN_STREAM_THROTTLE(2.0, "Transform from " << sourceFrame << " to " << targetFrame <<
+                                      " was unavailable for the time requested. Using latest instead.\n");
+      }
+      catch(tf::TransformException &ex)
+      {
+        ROS_WARN_STREAM_THROTTLE(2.0, "Could not obtain transform from " << sourceFrame <<
+                                      " to " << targetFrame << ". Error was " << ex.what() << "\n");
+
+        retVal = false;
+      }
+    }
+
+    // Transforming from a frame id to itself can fail when the tf tree isn't
+    // being broadcast (e.g., for some bag files). This is the only failure that
+    // would throw an exception, so check for this situation before giving up.
+    if(!retVal)
+    {
+      if(targetFrame == sourceFrame)
+      {
+        targetFrameTrans.setIdentity();
+        retVal = true;
+      }
+    }
+
+    return retVal;
+  }
+
+  template<typename T>
   bool RosFilter<T>::prepareAcceleration(const sensor_msgs::Imu::ConstPtr &msg,
                            const std::string &topicName,
                            const std::string &targetFrame,
@@ -1808,9 +1865,9 @@ namespace RobotLocalization
     RF_DEBUG("------ RosFilter::prepareAcceleration (" << topicName << ") ------\n");
 
     // 1. Get the measurement into a vector
-    tf2::Vector3 accTmp(msg->linear_acceleration.x,
-                        msg->linear_acceleration.y,
-                        msg->linear_acceleration.z);
+    tf::Vector3 accTmp(msg->linear_acceleration.x,
+                       msg->linear_acceleration.y,
+                       msg->linear_acceleration.z);
 
     // Set relevant header info
     std::string msgFrame = (msg->header.frame_id == "" ? baseLinkFrameId_ : msg->header.frame_id);
@@ -1823,9 +1880,9 @@ namespace RobotLocalization
     //    To do this, we create a pose from the original upate vector, which contains only
     //    zeros and ones. This pose goes through the same transforms as the measurement. The
     //    non-zero values that result will be used to modify the updateVector.
-    tf2::Matrix3x3 maskAcc(updateVector[StateMemberAx], 0, 0,
-                           0, updateVector[StateMemberAy], 0,
-                           0, 0, updateVector[StateMemberAz]);
+    tf::Matrix3x3 maskAcc(updateVector[StateMemberAx], 0, 0,
+                          0, updateVector[StateMemberAy], 0,
+                          0, 0, updateVector[StateMemberAz]);
 
     // 3. We'll need to rotate the covariance as well
     Eigen::MatrixXd covarianceRotated(ACCELERATION_SIZE, ACCELERATION_SIZE);
@@ -1840,12 +1897,8 @@ namespace RobotLocalization
     // 4. We need to transform this into the target frame (probably base_link)
     // It's unlikely that we'll get a velocity measurement in another frame, but
     // we have to handle the situation.
-    tf2::Transform targetFrameTrans;
-    bool canTransform = RosFilterUtilities::lookupTransformSafe(tfBuffer_,
-                                                                targetFrame,
-                                                                msgFrame,
-                                                                msg->header.stamp,
-                                                                targetFrameTrans);
+    tf::StampedTransform targetFrameTrans;
+    bool canTransform = lookupTransformSafe(targetFrame, msgFrame, msg->header.stamp, targetFrameTrans);
 
     if(canTransform)
     {
@@ -1853,12 +1906,12 @@ namespace RobotLocalization
       // of normal forces, so we use a parameter
       if(removeGravitationalAcc_[topicName])
       {
-        tf2::Vector3 normAcc(0, 0, 9.80665);
-        tf2::Quaternion curAttitude;
-        tf2::Transform trans;
-        tf2::fromMsg(msg->orientation, curAttitude);
+        tf::Vector3 normAcc(0, 0, 9.80665);
+        tf::Quaternion curAttitude;
+        tf::Transform trans;
+        tf::quaternionMsgToTF(msg->orientation, curAttitude);
         trans.setRotation(curAttitude);
-        tf2::Vector3 rotNorm = trans.getBasis().inverse() * normAcc;
+        tf::Vector3 rotNorm = trans.getBasis().inverse() * normAcc;
         accTmp.setX(accTmp.getX() - rotNorm.getX());
         accTmp.setY(accTmp.getY() - rotNorm.getY());
         accTmp.setZ(accTmp.getZ() - rotNorm.getZ());
@@ -1890,7 +1943,7 @@ namespace RobotLocalization
       // matrix that contains a 3D rotation matrix in the
       // upper-left and lower-right quadrants, and zeros
       // elsewhere
-      tf2::Matrix3x3 rot(targetFrameTrans.getRotation());
+      tf::Matrix3x3 rot(targetFrameTrans.getRotation());
       Eigen::MatrixXd rot3d(ACCELERATION_SIZE, ACCELERATION_SIZE);
       rot3d.setIdentity();
 
@@ -1932,21 +1985,21 @@ namespace RobotLocalization
 
   template<typename T>
   bool RosFilter<T>::preparePose(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
-                                 const std::string &topicName,
-                                 const std::string &targetFrame,
-                                 const bool differential,
-                                 const bool relative,
-                                 const bool imuData,
-                                 std::vector<int> &updateVector,
-                                 Eigen::VectorXd &measurement,
-                                 Eigen::MatrixXd &measurementCovariance)
+                              const std::string &topicName,
+                              const std::string &targetFrame,
+                              const bool differential,
+                              const bool relative,
+                              const bool imuData,
+                              std::vector<int> &updateVector,
+                              Eigen::VectorXd &measurement,
+                              Eigen::MatrixXd &measurementCovariance)
   {
     bool retVal = false;
 
     RF_DEBUG("------ RosFilter::preparePose (" << topicName << ") ------\n");
 
     // 1. Get the measurement into a tf-friendly transform (pose) object
-    tf2::Stamped<tf2::Transform> poseTmp;
+    tf::Stamped<tf::Pose> poseTmp;
 
     // This is mostly in support of IMU data: the IMU message has only a single
     // frame_id, but reports its data in two separate frames. We get around this
@@ -1979,11 +2032,11 @@ namespace RobotLocalization
     poseTmp.stamp_ = msg->header.stamp;
 
     // Fill out the position data
-    poseTmp.setOrigin(tf2::Vector3(msg->pose.pose.position.x,
-                                   msg->pose.pose.position.y,
-                                   msg->pose.pose.position.z));
+    poseTmp.setOrigin(tf::Vector3(msg->pose.pose.position.x,
+                                  msg->pose.pose.position.y,
+                                  msg->pose.pose.position.z));
 
-    tf2::Quaternion orientation;
+    tf::Quaternion orientation;
 
     // Handle bad (empty) quaternions
     if(msg->pose.pose.orientation.x == 0 && msg->pose.pose.orientation.y == 0 &&
@@ -2005,33 +2058,29 @@ namespace RobotLocalization
     }
     else
     {
-      tf2::fromMsg(msg->pose.pose.orientation, orientation);
+      tf::quaternionMsgToTF(msg->pose.pose.orientation, orientation);
     }
 
     poseTmp.setRotation(orientation);
 
     // We'll need this later for storing this measurement for differential integration
-    tf2::Transform curMeasurement;
+    tf::Transform curMeasurement;
 
     // 2. If this sensor is relative, remove the initial measurement for it
     if(relative)
     {
       if(initialMeasurements_.count(topicName) == 0)
       {
-        initialMeasurements_.insert(std::pair<std::string, tf2::Transform>(topicName, poseTmp));
+        initialMeasurements_.insert(std::pair<std::string, tf::Transform>(topicName, poseTmp));
       }
 
-      tf2::Transform initialMeasurement = initialMeasurements_[topicName];
+      tf::Pose initialMeasurement = initialMeasurements_[topicName];
       poseTmp.setData(initialMeasurement.inverseTimes(poseTmp));
     }
 
     // 3. Get the target frame transformation
-    tf2::Transform targetFrameTrans;
-    bool canTransform = RosFilterUtilities::lookupTransformSafe(tfBuffer_,
-                                                                finalTargetFrame,
-                                                                poseTmp.frame_id_,
-                                                                poseTmp.stamp_,
-                                                                targetFrameTrans);
+    tf::StampedTransform targetFrameTrans;
+    bool canTransform = lookupTransformSafe(finalTargetFrame, poseTmp.frame_id_, poseTmp.stamp_, targetFrameTrans);
 
     // 4. robot_localization lets users configure which variables from the sensor should be
     //    fused with the filter. This is specified at the sensor level. However, the data
@@ -2041,13 +2090,13 @@ namespace RobotLocalization
     //    To do this, we construct matrices using the update vector values on the diagonals,
     //    pass this matrix through the rotation, and use the length of each row to determine
     //    the transformed update vector.
-    tf2::Matrix3x3 maskPosition(updateVector[StateMemberX], 0, 0,
-                                0, updateVector[StateMemberY], 0,
-                                0, 0, updateVector[StateMemberZ]);
+    tf::Matrix3x3 maskPosition(updateVector[StateMemberX], 0, 0,
+                               0, updateVector[StateMemberY], 0,
+                               0, 0, updateVector[StateMemberZ]);
 
-    tf2::Matrix3x3 maskOrientation(updateVector[StateMemberRoll], 0, 0,
-                                   0, updateVector[StateMemberPitch], 0,
-                                   0, 0, updateVector[StateMemberYaw]);
+    tf::Matrix3x3 maskOrientation(updateVector[StateMemberRoll], 0, 0,
+                                  0, updateVector[StateMemberPitch], 0,
+                                  0, 0, updateVector[StateMemberYaw]);
 
     maskPosition = targetFrameTrans.getBasis() * maskPosition;
     maskOrientation = targetFrameTrans.getBasis() * maskOrientation;
@@ -2074,7 +2123,7 @@ namespace RobotLocalization
     // Now rotate the covariance: create an augmented matrix that
     // contains a 3D rotation matrix in the upper-left and lower-right
     // quadrants, with zeros elsewhere.
-    tf2::Matrix3x3 rot(targetFrameTrans.getRotation());
+    tf::Matrix3x3 rot(targetFrameTrans.getRotation());
     Eigen::MatrixXd rot6d(POSE_SIZE, POSE_SIZE);
     rot6d.setIdentity();
 
@@ -2093,7 +2142,8 @@ namespace RobotLocalization
 
     RF_DEBUG("After rotating into the " << finalTargetFrame << " frame, covariance is \n" << covarianceRotated << "\n");
 
-    // Make sure we can work with this data before carrying on
+    // Regardless of whether or not we are using differential mode, we'll need
+    // to transform the data into a target frame.
     if(canTransform)
     {
       // Two cases: if we're in differential mode, we need to generate a twist
@@ -2117,7 +2167,7 @@ namespace RobotLocalization
           // Even if we're not using all of the variables from this sensor,
           // we need to use the whole measurement to determine the delta
           // to the new measurement
-          tf2::Transform prevMeasurement = previousMeasurements_[topicName];
+          tf::Pose prevMeasurement = previousMeasurements_[topicName];
           poseTmp.setData(prevMeasurement.inverseTimes(poseTmp));
 
           RF_DEBUG("Previous measurement:\n" << previousMeasurements_[topicName] <<
@@ -2126,7 +2176,7 @@ namespace RobotLocalization
           // 6b. Now we we have a measurement delta in the frame_id of the
           // message, but we want that delta to be in the target frame, so
           // we need to apply the rotation of the target frame transform.
-          targetFrameTrans.setOrigin(tf2::Vector3(0.0, 0.0, 0.0));
+          targetFrameTrans.setOrigin(tf::Vector3(0.0, 0.0, 0.0));
           poseTmp.mult(targetFrameTrans, poseTmp);
 
           RF_DEBUG("After rotating to the target frame, measurement delta is:\n" << poseTmp << "\n");
@@ -2216,14 +2266,14 @@ namespace RobotLocalization
           RosFilterUtilities::quatToRPY(poseTmp.getRotation(), roll, pitch, yaw);
 
           // 6b. Apply the offset (making sure to bound them), and throw them in a vector
-          tf2::Vector3 rpyAngles(FilterUtilities::clampRotation(roll - rollOffset),
-                                 FilterUtilities::clampRotation(pitch - pitchOffset),
-                                 FilterUtilities::clampRotation(yaw - yawOffset));
+          tf::Vector3 rpyAngles(FilterUtilities::clampRotation(roll - rollOffset),
+                                FilterUtilities::clampRotation(pitch - pitchOffset),
+                                FilterUtilities::clampRotation(yaw - yawOffset));
 
           // 6c. Now we need to rotate the roll and pitch by the yaw offset value.
           // Imagine a case where an IMU is mounted facing sideways. In that case
           // pitch for the IMU's world frame is roll for the robot.
-          tf2::Matrix3x3 mat;
+          tf::Matrix3x3 mat;
           mat.setRPY(0.0, 0.0, yawOffset);
           rpyAngles = mat * rpyAngles;
           poseTmp.getBasis().setRPY(rpyAngles.getX(), rpyAngles.getY(), rpyAngles.getZ());
@@ -2282,10 +2332,10 @@ namespace RobotLocalization
     RF_DEBUG("------ RosFilter::prepareTwist (" << topicName << ") ------\n");
 
     // 1. Get the measurement into two separate vector objects.
-    tf2::Vector3 twistLin(msg->twist.twist.linear.x,
+    tf::Vector3 twistLin(msg->twist.twist.linear.x,
                          msg->twist.twist.linear.y,
                          msg->twist.twist.linear.z);
-    tf2::Vector3 measTwistRot(msg->twist.twist.angular.x,
+    tf::Vector3 measTwistRot(msg->twist.twist.angular.x,
                              msg->twist.twist.angular.y,
                              msg->twist.twist.angular.z);
 
@@ -2294,9 +2344,9 @@ namespace RobotLocalization
     // linear velocity resulting from angular velocity and the translational offset
     // of the sensor from the vehicle origin.
     const Eigen::VectorXd &state = filter_.getState();
-    tf2::Vector3 stateTwistRot(state(StateMemberVroll),
-                               state(StateMemberVpitch),
-                               state(StateMemberVyaw));
+    tf::Vector3 stateTwistRot(state(StateMemberVroll),
+                              state(StateMemberVpitch),
+                              state(StateMemberVyaw));
 
     // Determine the frame_id of the data
     std::string msgFrame = (msg->header.frame_id == "" ? targetFrame : msg->header.frame_id);
@@ -2309,13 +2359,13 @@ namespace RobotLocalization
     //    To do this, we construct matrices using the update vector values on the diagonals,
     //    pass this matrix through the rotation, and use the length of each row to determine
     //    the transformed update vector.
-    tf2::Matrix3x3 maskLin(updateVector[StateMemberVx], 0, 0,
-                           0, updateVector[StateMemberVy], 0,
-                           0, 0, updateVector[StateMemberVz]);
+    tf::Matrix3x3 maskLin(updateVector[StateMemberVx], 0, 0,
+                          0, updateVector[StateMemberVy], 0,
+                          0, 0, updateVector[StateMemberVz]);
 
-    tf2::Matrix3x3 maskRot(updateVector[StateMemberVroll], 0, 0,
-                           0, updateVector[StateMemberVpitch], 0,
-                           0, 0, updateVector[StateMemberVyaw]);
+    tf::Matrix3x3 maskRot(updateVector[StateMemberVroll], 0, 0,
+                          0, updateVector[StateMemberVpitch], 0,
+                          0, 0, updateVector[StateMemberVyaw]);
 
     // 3. We'll need to rotate the covariance as well
     Eigen::MatrixXd covarianceRotated(TWIST_SIZE, TWIST_SIZE);
@@ -2329,12 +2379,8 @@ namespace RobotLocalization
              "\nOriginal covariance matrix:\n" << covarianceRotated << "\n");
 
     // 4. We need to transform this into the target frame (probably base_link)
-    tf2::Transform targetFrameTrans;
-    bool canTransform = RosFilterUtilities::lookupTransformSafe(tfBuffer_,
-                                                                targetFrame,
-                                                                msgFrame,
-                                                                msg->header.stamp,
-                                                                targetFrameTrans);
+    tf::StampedTransform targetFrameTrans;
+    bool canTransform = lookupTransformSafe(targetFrame, msgFrame, msg->header.stamp, targetFrameTrans);
 
     if(canTransform)
     {
@@ -2362,7 +2408,7 @@ namespace RobotLocalization
       // matrix that contains a 3D rotation matrix in the
       // upper-left and lower-right quadrants, and zeros
       // elsewhere
-      tf2::Matrix3x3 rot(targetFrameTrans.getRotation());
+      tf::Matrix3x3 rot(targetFrameTrans.getRotation());
       Eigen::MatrixXd rot6d(TWIST_SIZE, TWIST_SIZE);
       rot6d.setIdentity();
 
