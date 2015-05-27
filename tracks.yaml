@@ -82,8 +82,8 @@ tracks:
     patches: null
     release_inc: '1'
     release_repo_url: null
-    release_tag: 2.2.0
+    release_tag: 2.2.1
     ros_distro: jade
     vcs_type: git
     vcs_uri: https://github.com/cra-ros-pkg/robot_localization.git
-    version: 2.2.0
+    version: 2.2.1
