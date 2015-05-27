@@ -3,9 +3,12 @@ project(robot_localization)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
-  tf
+  tf2
+  tf2_ros
+  tf2_geometry_msgs
   message_filters
   std_msgs
+  geographic_msgs
   geometry_msgs
   nav_msgs
   sensor_msgs
@@ -23,10 +26,12 @@ add_definitions(-DEIGEN_NO_DEBUG)
 add_service_files(
   FILES
   SetPose.srv
+  SetDatum.srv
 )
 
 generate_messages(
   DEPENDENCIES
+  geographic_msgs
   geometry_msgs
   std_msgs
 )
@@ -36,7 +41,8 @@ catkin_package(
   LIBRARIES filter_base ekf
   CATKIN_DEPENDS
     roscpp
-    tf
+    tf2
+    tf2_ros
     message_filters
     std_msgs
     geometry_msgs
@@ -66,6 +72,7 @@ add_library(navsat_transform src/navsat_transform.cpp)
 
 # Dependencies
 add_dependencies(filter_base robot_localization_gencpp)
+add_dependencies(navsat_transform robot_localization_gencpp)
 
 # Executables
 add_executable(ekf_localization_node src/ekf_localization_node.cpp)
@@ -81,7 +88,7 @@ target_link_libraries(ukf filter_base ${catkin_LIBRARIES})
 target_link_libraries(ros_filter ekf ukf ros_filter_utilities ${catkin_LIBRARIES})
 target_link_libraries(ekf_localization_node ros_filter ${catkin_LIBRARIES})
 target_link_libraries(ukf_localization_node ros_filter ${catkin_LIBRARIES})
-target_link_libraries(navsat_transform ${catkin_LIBRARIES})
+target_link_libraries(navsat_transform filter_utilities ros_filter_utilities ${catkin_LIBRARIES})
 target_link_libraries(navsat_transform_node navsat_transform ${catkin_LIBRARIES})
 
 #############
