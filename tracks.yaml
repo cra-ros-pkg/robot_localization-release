@@ -60,11 +60,11 @@ tracks:
     patches: null
     release_inc: '2'
     release_repo_url: null
-    release_tag: 2.2.0
+    release_tag: 2.2.1
     ros_distro: indigo
     vcs_type: git
     vcs_uri: https://github.com/cra-ros-pkg/robot_localization.git
-    version: 2.2.0
+    version: 2.2.1
   jade:
     actions:
     - bloom-export-upstream :{vcs_local_uri} :{vcs_type} --tag :{release_tag} --display-uri
