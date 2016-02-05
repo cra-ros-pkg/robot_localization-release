@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Charles River Analytics, Inc.
+ * Copyright (c) 2014, 2015, 2016, Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,13 +42,14 @@
 #include <Eigen/Cholesky>
 
 #include <iostream>
+#include <vector>
 
 #include <assert.h>
 
 namespace RobotLocalization
 {
   Ukf::Ukf(std::vector<double> args) :
-    FilterBase(), // Must initialize filter base!
+    FilterBase(),  // Must initialize filter base!
     uncorrected_(true)
   {
     assert(args.size() == 3);
@@ -69,7 +70,7 @@ namespace RobotLocalization
     stateWeights_[0] = lambda_ / (STATE_SIZE + lambda_);
     covarWeights_[0] = stateWeights_[0] + (1 - (alpha * alpha) + beta);
     sigmaPoints_[0].setZero();
-    for(size_t i = 1; i < sigmaCount; ++i)
+    for (size_t i = 1; i < sigmaCount; ++i)
     {
       sigmaPoints_[i].setZero();
       stateWeights_[i] =  1 / (2 * (STATE_SIZE + lambda_));
@@ -92,7 +93,7 @@ namespace RobotLocalization
     // several times in succession (multiple measurements with different time stamps). In
     // that event, the sigma points need to be updated to reflect the current state.
     // Throughout prediction and correction, we attempt to maximize efficiency in Eigen.
-    if(!uncorrected_)
+    if (!uncorrected_)
     {
       // Take the square root of a small fraction of the estimateErrorCovariance_ using LL' decomposition
       weightedCovarSqrt_ = ((STATE_SIZE + lambda_) * estimateErrorCovariance_).llt().matrixL();
@@ -104,7 +105,7 @@ namespace RobotLocalization
 
       // Next STATE_SIZE sigma points are state + weightedCovarSqrt_[ith column]
       // STATE_SIZE sigma points after that are state - weightedCovarSqrt_[ith column]
-      for(size_t sigmaInd = 0; sigmaInd < STATE_SIZE; ++sigmaInd)
+      for (size_t sigmaInd = 0; sigmaInd < STATE_SIZE; ++sigmaInd)
       {
         sigmaPoints_[sigmaInd + 1] = state_ + weightedCovarSqrt_.col(sigmaInd);
         sigmaPoints_[sigmaInd + 1 + STATE_SIZE] = state_ - weightedCovarSqrt_.col(sigmaInd);
@@ -141,12 +142,12 @@ namespace RobotLocalization
     size_t updateSize = updateIndices.size();
 
     // Now set up the relevant matrices
-    Eigen::VectorXd stateSubset(updateSize);                             // x (in most literature)
-    Eigen::VectorXd measurementSubset(updateSize);                       // z
-    Eigen::MatrixXd measurementCovarianceSubset(updateSize, updateSize); // R
-    Eigen::MatrixXd stateToMeasurementSubset(updateSize, STATE_SIZE);    // H
-    Eigen::MatrixXd kalmanGainSubset(STATE_SIZE, updateSize);            // K
-    Eigen::VectorXd innovationSubset(updateSize);                        // z - Hx
+    Eigen::VectorXd stateSubset(updateSize);                              // x (in most literature)
+    Eigen::VectorXd measurementSubset(updateSize);                        // z
+    Eigen::MatrixXd measurementCovarianceSubset(updateSize, updateSize);  // R
+    Eigen::MatrixXd stateToMeasurementSubset(updateSize, STATE_SIZE);     // H
+    Eigen::MatrixXd kalmanGainSubset(STATE_SIZE, updateSize);             // K
+    Eigen::VectorXd innovationSubset(updateSize);                         // z - Hx
     Eigen::VectorXd predictedMeasurement(updateSize);
     Eigen::VectorXd sigmaDiff(updateSize);
     Eigen::MatrixXd predictedMeasCovar(updateSize, updateSize);
@@ -216,7 +217,7 @@ namespace RobotLocalization
              "\nState-to-measurement subset is:\n" << stateToMeasurementSubset << "\n");
 
     // (1) Generate sigma points, use them to generate a predicted measurement
-    for(size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
+    for (size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
     {
       sigmaPointMeasurements[sigmaInd] = stateToMeasurementSubset * sigmaPoints_[sigmaInd];
       predictedMeasurement.noalias() += stateWeights_[sigmaInd] * sigmaPointMeasurements[sigmaInd];
@@ -224,7 +225,7 @@ namespace RobotLocalization
 
     // (2) Use the sigma point measurements and predicted measurement to compute a predicted
     // measurement covariance matrix P_zz and a state/measurement cross-covariance matrix P_xz.
-    for(size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
+    for (size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
     {
       sigmaDiff = sigmaPointMeasurements[sigmaInd] - predictedMeasurement;
       predictedMeasCovar.noalias() += covarWeights_[sigmaInd] * (sigmaDiff * sigmaDiff.transpose());
@@ -238,25 +239,28 @@ namespace RobotLocalization
     // (4) Apply the gain to the difference between the actual and predicted measurements: x = x + K(z - z_hat)
     innovationSubset = (measurementSubset - predictedMeasurement);
 
+    // Wrap angles in the innovation
+    for (size_t i = 0; i < updateSize; ++i)
+    {
+      if (updateIndices[i] == StateMemberRoll  ||
+          updateIndices[i] == StateMemberPitch ||
+          updateIndices[i] == StateMemberYaw)
+      {
+        while (innovationSubset(i) < -PI)
+        {
+          innovationSubset(i) += TAU;
+        }
+
+        while (innovationSubset(i) > PI)
+        {
+          innovationSubset(i) -= TAU;
+        }
+      }
+    }
+
     // (5) Check Mahalanobis distance of innovation
     if (checkMahalanobisThreshold(innovationSubset, invInnovCov, measurement.mahalanobisThresh_))
     {
-      // Wrap angles in the innovation
-      for (size_t i = 0; i < updateSize; ++i)
-      {
-        if (updateIndices[i] == StateMemberRoll || updateIndices[i] == StateMemberPitch || updateIndices[i] == StateMemberYaw)
-        {
-          while (innovationSubset(i) < -PI)
-          {
-            innovationSubset(i) += TAU;
-          }
-
-          while (innovationSubset(i) > PI)
-          {
-            innovationSubset(i) -= TAU;
-          }
-        }
-      }
 
       state_.noalias() += kalmanGainSubset * innovationSubset;
 
@@ -289,12 +293,18 @@ namespace RobotLocalization
     double yaw = state_(StateMemberYaw);
 
     // We'll need these trig calculations a lot.
-    double cr = cos(roll);
-    double cp = cos(pitch);
-    double cy = cos(yaw);
-    double sr = sin(roll);
-    double sp = sin(pitch);
-    double sy = sin(yaw);
+    double sp = 0.0;
+    double cp = 0.0;
+    ::sincos(pitch, &sp, &cp);
+
+    double sr = 0.0;
+    double cr = 0.0;
+    ::sincos(roll, &sr, &cr);
+
+    double sy = 0.0;
+    double cy = 0.0;
+    ::sincos(yaw, &sy, &cy);
+
 
     // Prepare the transfer function
     transferFunction_(StateMemberX, StateMemberVx) = cy * cp * delta;
@@ -339,7 +349,7 @@ namespace RobotLocalization
 
     // Next STATE_SIZE sigma points are state + weightedCovarSqrt_[ith column]
     // STATE_SIZE sigma points after that are state - weightedCovarSqrt_[ith column]
-    for(size_t sigmaInd = 0; sigmaInd < STATE_SIZE; ++sigmaInd)
+    for (size_t sigmaInd = 0; sigmaInd < STATE_SIZE; ++sigmaInd)
     {
       sigmaPoints_[sigmaInd + 1] = transferFunction_ * (state_ + weightedCovarSqrt_.col(sigmaInd));
       sigmaPoints_[sigmaInd + 1 + STATE_SIZE] = transferFunction_ * (state_ - weightedCovarSqrt_.col(sigmaInd));
@@ -347,7 +357,7 @@ namespace RobotLocalization
 
     // (3) Sum the weighted sigma points to generate a new state prediction
     state_.setZero();
-    for(size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
+    for (size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
     {
       state_.noalias() += stateWeights_[sigmaInd] * sigmaPoints_[sigmaInd];
     }
@@ -355,7 +365,7 @@ namespace RobotLocalization
     // (4) Now us the sigma points and the predicted state to compute a predicted covariance
     estimateErrorCovariance_.setZero();
     Eigen::VectorXd sigmaDiff(STATE_SIZE);
-    for(size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
+    for (size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
     {
       sigmaDiff = (sigmaPoints_[sigmaInd] - state_);
       estimateErrorCovariance_.noalias() += covarWeights_[sigmaInd] * (sigmaDiff * sigmaDiff.transpose());
@@ -376,4 +386,4 @@ namespace RobotLocalization
              "\n\n--------------------- /Ukf::predict ----------------------\n");
   }
 
-}
+}  // namespace RobotLocalization
