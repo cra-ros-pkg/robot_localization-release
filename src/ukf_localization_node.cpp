@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Charles River Analytics, Inc.
+ * Copyright (c) 2014, 2015, 2016, Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,6 +33,8 @@
 #include "robot_localization/ros_filter_types.h"
 
 #include <ros/ros.h>
+
+#include <vector>
 
 int main(int argc, char **argv)
 {
