@@ -1,4 +1,4 @@
-From 4e5f36398c887680a267f1b2089e3f0af8a7b5de Mon Sep 17 00:00:00 2001
+From 10831b462b5cd83d4f773fea077504206b1e325a Mon Sep 17 00:00:00 2001
 From: Tom Moore <ayrton04@gmail.com>
 Date: Sat, 23 May 2015 20:47:33 -0400
 Subject: [PATCH] Enabling O3
@@ -21,5 +21,5 @@ index 991c991..02edf45 100755
  %:
  	dh  $@@
 -- 
-1.9.1
+2.7.4
 
