@@ -64,10 +64,35 @@ std::ostream& operator<<(std::ostream& os, const tf2::Transform &trans)
   return os;
 }
 
+std::ostream& operator<<(std::ostream& os, const std::vector<double> &vec)
+{
+  os << "(" << std::setprecision(20);
+
+  for(size_t i = 0; i < vec.size(); ++i)
+  {
+    os << vec[i] << " ";
+  }
+
+  os << ")\n";
+
+  return os;
+}
+
 namespace RobotLocalization
 {
 namespace RosFilterUtilities
 {
+
+  double getYaw(const tf2::Quaternion quat)
+  {
+    tf2::Matrix3x3 mat(quat);
+
+    double dummy;
+    double yaw;
+    mat.getRPY(dummy, dummy, yaw);
+
+    return yaw;
+  }
 
   bool lookupTransformSafe(const tf2_ros::Buffer &buffer,
                            const std::string &targetFrame,
