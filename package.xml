@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>robot_localization</name>
-  <version>2.3.1</version>
-  <description>The robot_localization package provides nonlinear state estimation through sensor fusion of an abritrary number of sensors.</description>
+  <version>2.3.2</version>
+  <description>Provides nonlinear state estimation through sensor fusion of an abritrary number of sensors.</description>
 
   <maintainer email="ayrton04@gmail.com">Tom Moore</maintainer>
 
@@ -13,7 +13,7 @@
   <author email="ayrton04@gmail.com">Tom Moore</author> 
 
   <buildtool_depend>catkin</buildtool_depend>
-  
+
   <depend>cmake_modules</depend>
   <depend>diagnostic_msgs</depend>
   <depend>diagnostic_updater</depend>
@@ -28,11 +28,11 @@
   <depend>tf2</depend>
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_ros</depend>
-  
+
   <build_depend>message_generation</build_depend>
   <build_depend>python-catkin-pkg</build_depend>
   <build_depend>roslint</build_depend>
-  
+
   <exec_depend>message_runtime</exec_depend>
 
   <test_depend>rosbag</test_depend>
