@@ -47,6 +47,7 @@
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/TwistWithCovarianceStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <geometry_msgs/AccelWithCovarianceStamped.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/message_filter.h>
@@ -56,7 +57,7 @@
 #include <diagnostic_updater/publisher.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
 
-#include <XmlRpcException.h>
+#include <xmlrpcpp/XmlRpcException.h>
 
 #include <Eigen/Dense>
 
@@ -116,6 +117,10 @@ template<class T> class RosFilter
     //!
     ~RosFilter();
 
+    //! @brief Resets the filter to its initial state
+    //!
+    void reset();
+
     //! @brief Callback method for receiving all acceleration (IMU) messages
     //! @param[in] msg - The ROS IMU message to take in.
     //! @param[in] callbackData - Relevant static callback data
@@ -169,6 +174,12 @@ template<class T> class RosFilter
     //! @return true if the filter is initialized, false otherwise
     //!
     bool getFilteredOdometryMessage(nav_msgs::Odometry &message);
+
+    //! @brief Retrieves the EKF's acceleration output for broadcasting
+    //! @param[out] message - The standard ROS acceleration message to be filled
+    //! @return true if the filter is initialized, false otherwise
+    //!
+    bool getFilteredAccelMessage(geometry_msgs::AccelWithCovarianceStamped &message);
 
     //! @brief Callback method for receiving all IMU messages
     //! @param[in] msg - The ROS IMU message to take in.
@@ -423,6 +434,13 @@ template<class T> class RosFilter
     //!
     double historyLength_;
 
+    //! @brief Whether to reset the filters when backwards jump in time is detected
+    //!
+    //! This is usually the case when logs are being used and a jump in the logi
+    //! is done or if a log files restarts from the beginning.
+    //!
+    bool resetOnTimeJump_;
+
     //! @brief The most recent control input
     //!
     Eigen::VectorXd latestControl_;
@@ -430,6 +448,10 @@ template<class T> class RosFilter
     //! @brief The time of the most recent control input
     //!
     ros::Time latestControlTime_;
+
+    //! @brief Parameter that specifies the how long we wait for a transform to become available.
+    //!
+    ros::Duration tfTimeout_;
 
     //! @brief Vector to hold our subscribers until they go out of scope
     //!
@@ -510,6 +532,10 @@ template<class T> class RosFilter
     //!
     std::map<std::string, bool> removeGravitationalAcc_;
 
+    //! @brief What is the acceleration in Z due to gravity (m/s^2)? Default is +9.80665.
+    //!
+    double gravitationalAcc_;
+
     //! @brief Subscribes to the set_pose topic (usually published from rviz). Message
     //! type is geometry_msgs/PoseWithCovarianceStamped.
     //!
@@ -571,6 +597,10 @@ template<class T> class RosFilter
     //! @brief Whether we publish the transform from the world_frame to the base_link_frame
     //!
     bool publishTransform_;
+
+    //! @brief Whether we publish the acceleration
+    //!
+    bool publishAcceleration_;
 
     //! @brief An implicitly time ordered queue of past filter states used for smoothing.
     //
