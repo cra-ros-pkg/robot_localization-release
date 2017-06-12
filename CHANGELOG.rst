@@ -2,7 +2,7 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.3.2 (2017-06-06)
+2.4.0 (2017-06-12)
 ------------------
 * Updated documentation
 * Added reset_on_time_jump option
