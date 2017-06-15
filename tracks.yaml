@@ -129,9 +129,10 @@ tracks:
     - git-bloom-generate -y rosrpm --prefix release/:{ros_distro} :{ros_distro} -i
       :{release_inc}
     devel_branch: lunar-devel
+    last_version: 2.4.0
     name: robot_localization
     patches: null
-    release_inc: -1
+    release_inc: '0'
     release_repo_url: null
     release_tag: :{version}
     ros_distro: lunar
