@@ -1,3 +1,26 @@
+## robot_localization (lunar) - 2.4.0-1
+
+The packages in the `robot_localization` repository were released into the `lunar` distro by running `/usr/bin/bloom-release -t lunar -r lunar robot_localization` on `Thu, 15 Jun 2017 06:48:43 -0000`
+
+The `robot_localization` package was released.
+
+Version of package(s) in repository `robot_localization`:
+
+- upstream repository: https://github.com/cra-ros-pkg/robot_localization.git
+- release repository: unknown
+- rosdistro version: `null`
+- old version: `2.4.0-0`
+- new version: `2.4.0-1`
+
+Versions of tools used:
+
+- bloom version: `0.5.26`
+- catkin_pkg version: `0.3.1`
+- rosdep version: `0.11.5`
+- rosdistro version: `0.6.2`
+- vcstools version: `0.1.39`
+
+
 ## robot_localization (lunar) - 2.4.0-0
 
 The packages in the `robot_localization` repository were released into the `lunar` distro by running `/usr/bin/bloom-release -t lunar -r lunar robot_localization --edit` on `Thu, 15 Jun 2017 06:43:48 -0000`
