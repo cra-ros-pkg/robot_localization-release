@@ -44,7 +44,7 @@ using RobotLocalization::STATE_SIZE;
 class RosUkfPassThrough : public RosUkf
 {
   public:
-    explicit RosUkfPassThrough(std::vector<double> &args) : RosUkf(args)
+    explicit RosUkfPassThrough(std::vector<double> &args) : RosUkf(ros::NodeHandle(), ros::NodeHandle("~"), args)
     {
     }
 
@@ -67,6 +67,8 @@ TEST(UkfTest, Measurements)
   initialCovar.setIdentity();
   initialCovar *= 0.5;
   ukf.getFilter().setEstimateErrorCovariance(initialCovar);
+
+  EXPECT_EQ(ukf.getFilter().getEstimateErrorCovariance(), initialCovar);
 
   Eigen::VectorXd measurement(STATE_SIZE);
   for (size_t i = 0; i < STATE_SIZE; ++i)
