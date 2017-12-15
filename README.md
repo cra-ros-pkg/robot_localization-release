@@ -1,3 +1,26 @@
+## robot_localization (indigo) - 2.3.3-0
+
+The packages in the `robot_localization` repository were released into the `indigo` distro by running `/usr/bin/bloom-release -t indigo -r indigo robot_localization` on `Fri, 15 Dec 2017 13:07:02 -0000`
+
+The `robot_localization` package was released.
+
+Version of package(s) in repository `robot_localization`:
+
+- upstream repository: https://github.com/cra-ros-pkg/robot_localization.git
+- release repository: https://github.com/cra-ros-pkg/robot_localization-release.git
+- rosdistro version: `2.3.2-0`
+- old version: `2.3.2-0`
+- new version: `2.3.3-0`
+
+Versions of tools used:
+
+- bloom version: `0.5.26`
+- catkin_pkg version: `0.3.4`
+- rosdep version: `0.11.5`
+- rosdistro version: `0.6.2`
+- vcstools version: `0.1.39`
+
+
 ## robot_localization (lunar) - 2.4.0-1
 
 The packages in the `robot_localization` repository were released into the `lunar` distro by running `/usr/bin/bloom-release -t lunar -r lunar robot_localization` on `Thu, 15 Jun 2017 06:48:43 -0000`
