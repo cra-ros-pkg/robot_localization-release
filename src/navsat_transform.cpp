@@ -127,7 +127,7 @@ namespace RobotLocalization
         }
 
         std::ostringstream ostr;
-        ostr << datum_config[0] << " " << datum_config[1] << " " << datum_config[2];
+        ostr << std::setprecision(20) << datum_config[0] << " " << datum_config[1] << " " << datum_config[2];
         std::istringstream istr(ostr.str());
         istr >> datum_lat >> datum_lon >> datum_yaw;
 
@@ -430,7 +430,10 @@ namespace RobotLocalization
 
       if (can_transform)
       {
+        // Zero out rotation because we don't care about the orientation of the
+        // GPS receiver relative to base_link
         gps_offset_rotated.setOrigin(tf2::quatRotate(robot_orientation.getRotation(), gps_offset_rotated.getOrigin()));
+        gps_offset_rotated.setRotation(tf2::Quaternion::getIdentity());
         robot_odom_pose = gps_offset_rotated.inverse() * gps_odom_pose;
       }
       else
