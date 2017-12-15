@@ -2,7 +2,17 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.4.0 (2017-06-12)
+2.3.3 (2017-12-15)
+------------------
+* Zero out rotation in GPS to base_link transform
+* Fix typo in reading Mahalanobis thresholds.
+* Fixing state history reversion
+* Some trivial changes to lessen the differences to lunar
+* Fixing critical bug with dynamic process noise covariance
+* Fixing datum precision
+* Contributors: Jacob Seibert, Pavlo Kolomiiets, Tom Moore
+
+2.3.2 (2017-06-06)
 ------------------
 * Updated documentation
 * Added reset_on_time_jump option

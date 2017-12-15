@@ -15,8 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   tf2
   tf2_geometry_msgs
-  tf2_ros
-  xmlrpcpp)
+  tf2_ros)
 
 # Attempt to find Eigen using its own CMake module.
 # If that fails, fall back to cmake_modules package.
@@ -39,15 +38,15 @@ roslint_cpp()
 ###################################
 add_service_files(
   FILES
-  SetDatum.srv
-  SetPose.srv
+    SetDatum.srv
+    SetPose.srv
 )
 
 generate_messages(
   DEPENDENCIES
-  geographic_msgs
-  geometry_msgs
-  std_msgs
+    geographic_msgs
+    geometry_msgs
+    std_msgs
 )
 
 catkin_package(
@@ -76,7 +75,6 @@ catkin_package(
     tf2
     tf2_geometry_msgs
     tf2_ros
-    xmlrpcpp
   DEPENDS ${EIGEN_PACKAGE}
 )
 
