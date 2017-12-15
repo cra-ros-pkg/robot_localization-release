@@ -1,4 +1,4 @@
-From a054cc6c0ddfd127232d6fbffaba8e67185e97b9 Mon Sep 17 00:00:00 2001
+From d2667310b90648c8c7827586747cf180b05ad159 Mon Sep 17 00:00:00 2001
 From: Tom Moore <tmoore@locusrobotics.com>
 Date: Thu, 15 Jun 2017 07:45:31 +0100
 Subject: [PATCH] Update rules.em
@@ -21,5 +21,5 @@ index 991c991..02edf45 100755
  %:
  	dh  $@@
 -- 
-2.7.4
+1.9.1
 
