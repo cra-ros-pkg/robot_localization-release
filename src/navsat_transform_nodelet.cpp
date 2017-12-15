@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, 2016, Charles River Analytics, Inc.
+ * Copyright (c) 2017 Simon Gene Gottlieb
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,20 +32,30 @@
 
 #include "robot_localization/navsat_transform.h"
 
+#include <nodelet/nodelet.h>
+#include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
 
-int main(int argc, char **argv)
+namespace RobotLocalization
 {
-  ros::init(argc, argv, "navsat_transform_node");
 
-  ros::NodeHandle nh;
-  ros::NodeHandle nh_priv("~");
+class NavSatTransformNodelet : public nodelet::Nodelet
+{
+private:
+  std::auto_ptr<RobotLocalization::NavSatTransform> trans;
 
+public:
+  virtual void onInit()
+  {
+    NODELET_DEBUG("Initializing nodelet...");
 
-  RobotLocalization::NavSatTransform trans(nh, nh_priv);
-  ros::spin();
+    ros::NodeHandle nh      = getNodeHandle();
+    ros::NodeHandle nh_priv = getPrivateNodeHandle();
 
-  return EXIT_SUCCESS;
-}
+    trans.reset(new RobotLocalization::NavSatTransform(nh, nh_priv));
+  }
+};
 
+}  // namespace RobotLocalization
 
+PLUGINLIB_EXPORT_CLASS(RobotLocalization::NavSatTransformNodelet, nodelet::Nodelet);
