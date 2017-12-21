@@ -44,7 +44,7 @@ using RobotLocalization::STATE_SIZE;
 class RosEkfPassThrough : public RosEkf
 {
   public:
-    RosEkfPassThrough() : RosEkf(ros::NodeHandle(), ros::NodeHandle("~"))
+    RosEkfPassThrough()
     {
     }
 

@@ -43,7 +43,7 @@
 
 namespace RobotLocalization
 {
-  NavSatTransform::NavSatTransform(ros::NodeHandle nh, ros::NodeHandle nh_priv) :
+  NavSatTransform::NavSatTransform() :
     magnetic_declination_(0.0),
     utm_odom_tf_yaw_(0.0),
     yaw_offset_(0.0),
@@ -68,12 +68,22 @@ namespace RobotLocalization
   {
     latest_utm_covariance_.resize(POSE_SIZE, POSE_SIZE);
     latest_odom_covariance_.resize(POSE_SIZE, POSE_SIZE);
+  }
 
+  NavSatTransform::~NavSatTransform()
+  {
+  }
+
+  void NavSatTransform::run()
+  {
     ros::Time::init();
 
-    double frequency;
+    double frequency = 10.0;
     double delay = 0.0;
     double transform_timeout = 0.0;
+
+    ros::NodeHandle nh;
+    ros::NodeHandle nh_priv("~");
 
     // Load the parameters we need
     nh_priv.getParam("magnetic_declination_radians", magnetic_declination_);
@@ -149,19 +159,21 @@ namespace RobotLocalization
       }
     }
 
-    odom_sub_ = nh.subscribe("odometry/filtered", 1, &NavSatTransform::odomCallback, this);
-    gps_sub_  = nh.subscribe("gps/fix", 1, &NavSatTransform::gpsFixCallback, this);
+    ros::Subscriber odom_sub = nh.subscribe("odometry/filtered", 1, &NavSatTransform::odomCallback, this);
+    ros::Subscriber gps_sub = nh.subscribe("gps/fix", 1, &NavSatTransform::gpsFixCallback, this);
+    ros::Subscriber imu_sub;
 
     if (!use_odometry_yaw_ && !use_manual_datum_)
     {
-      imu_sub_ = nh.subscribe("imu/data", 1, &NavSatTransform::imuCallback, this);
+      imu_sub = nh.subscribe("imu/data", 1, &NavSatTransform::imuCallback, this);
     }
 
-    gps_odom_pub_ = nh.advertise<nav_msgs::Odometry>("odometry/gps", 10);
+    ros::Publisher gps_odom_pub = nh.advertise<nav_msgs::Odometry>("odometry/gps", 10);
+    ros::Publisher filtered_gps_pub;
 
     if (publish_gps_)
     {
-      filtered_gps_pub_ = nh.advertise<sensor_msgs::NavSatFix>("gps/filtered", 10);
+      filtered_gps_pub = nh.advertise<sensor_msgs::NavSatFix>("gps/filtered", 10);
     }
 
     // Sleep for the parameterized amount of time, to give
@@ -169,42 +181,40 @@ namespace RobotLocalization
     ros::Duration start_delay(delay);
     start_delay.sleep();
 
-    periodicUpdateTimer_ = nh.createTimer(ros::Duration(1./frequency), &NavSatTransform::periodicUpdate, this);
-  }
-
-  NavSatTransform::~NavSatTransform()
-  {
-  }
-
-//  void NavSatTransform::run()
-  void NavSatTransform::periodicUpdate(const ros::TimerEvent& event)
-  {
-    if (!transform_good_)
+    ros::Rate rate(frequency);
+    while (ros::ok())
     {
-      computeTransform();
+      ros::spinOnce();
 
-      if (transform_good_ && !use_odometry_yaw_ && !use_manual_datum_)
+      if (!transform_good_)
       {
-        // Once we have the transform, we don't need the IMU
-        imu_sub_.shutdown();
-      }
-    }
-    else
-    {
-      nav_msgs::Odometry gps_odom;
-      if (prepareGpsOdometry(gps_odom))
-      {
-        gps_odom_pub_.publish(gps_odom);
-      }
+        computeTransform();
 
-      if (publish_gps_)
-      {
-        sensor_msgs::NavSatFix odom_gps;
-        if (prepareFilteredGps(odom_gps))
+        if (transform_good_ && !use_odometry_yaw_ && !use_manual_datum_)
         {
-          filtered_gps_pub_.publish(odom_gps);
+          // Once we have the transform, we don't need the IMU
+          imu_sub.shutdown();
         }
       }
+      else
+      {
+        nav_msgs::Odometry gps_odom;
+        if (prepareGpsOdometry(gps_odom))
+        {
+          gps_odom_pub.publish(gps_odom);
+        }
+
+        if (publish_gps_)
+        {
+          sensor_msgs::NavSatFix odom_gps;
+          if (prepareFilteredGps(odom_gps))
+          {
+            filtered_gps_pub.publish(odom_gps);
+          }
+        }
+      }
+
+      rate.sleep();
     }
   }
 
