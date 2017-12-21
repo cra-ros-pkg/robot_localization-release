@@ -1,3 +1,26 @@
+## robot_localization (kinetic) - 2.4.1-1
+
+The packages in the `robot_localization` repository were released into the `kinetic` distro by running `/usr/local/bin/bloom-release -t kinetic -r kinetic robot_localization --edit` on `Thu, 21 Dec 2017 23:08:39 -0000`
+
+The `robot_localization` package was released.
+
+Version of package(s) in repository `robot_localization`:
+
+- upstream repository: https://github.com/cra-ros-pkg/robot_localization.git
+- release repository: https://github.com/cra-ros-pkg/robot_localization-release.git
+- rosdistro version: `2.4.1-0`
+- old version: `2.4.1-0`
+- new version: `2.4.1-1`
+
+Versions of tools used:
+
+- bloom version: `0.6.1`
+- catkin_pkg version: `0.3.9`
+- rosdep version: `0.11.8`
+- rosdistro version: `0.6.3`
+- vcstools version: `0.1.39`
+
+
 ## robot_localization (lunar) - 2.5.0-0
 
 The packages in the `robot_localization` repository were released into the `lunar` distro by running `/usr/bin/bloom-release -t lunar -r lunar robot_localization` on `Fri, 15 Dec 2017 13:23:04 -0000`
