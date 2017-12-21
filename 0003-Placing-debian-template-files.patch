@@ -1,0 +1,161 @@
+From 7508c4098f71d0b91ac949f345c2aa6db8fd2470 Mon Sep 17 00:00:00 2001
+From: Tom Moore <ayrton04@gmail.com>
+Date: Thu, 21 Dec 2017 23:03:22 +0000
+Subject: [PATCH 3/3] Placing debian template files
+
+---
+ debian/changelog.em      |  7 ++++++
+ debian/compat.em         |  1 +
+ debian/control.em        | 14 +++++++++++
+ debian/gbp.conf.em       |  3 +++
+ debian/rules.em          | 61 ++++++++++++++++++++++++++++++++++++++++++++++++
+ debian/source/format.em  |  1 +
+ debian/source/options.em |  6 +++++
+ 7 files changed, 93 insertions(+)
+ create mode 100644 debian/changelog.em
+ create mode 100644 debian/compat.em
+ create mode 100644 debian/control.em
+ create mode 100644 debian/gbp.conf.em
+ create mode 100755 debian/rules.em
+ create mode 100644 debian/source/format.em
+ create mode 100644 debian/source/options.em
+
+diff --git a/debian/changelog.em b/debian/changelog.em
+new file mode 100644
+index 0000000..3585909
+--- /dev/null
++++ b/debian/changelog.em
+@@ -0,0 +1,7 @@
++@[for change_version, change_date, changelog, main_name, main_email in changelogs]@(Package) (@(change_version)@(DebianInc)@(Distribution)) @(Distribution); urgency=high
++
++@(changelog)
++
++ -- @(main_name) <@(main_email)>  @(change_date)
++
++@[end for]
+diff --git a/debian/compat.em b/debian/compat.em
+new file mode 100644
+index 0000000..b7f8528
+--- /dev/null
++++ b/debian/compat.em
+@@ -0,0 +1 @@
++@(debhelper_version)
+\ No newline at end of file
+diff --git a/debian/control.em b/debian/control.em
+new file mode 100644
+index 0000000..7cbf65a
+--- /dev/null
++++ b/debian/control.em
+@@ -0,0 +1,14 @@
++Source: @(Package)
++Section: misc
++Priority: extra
++Maintainer: @(Maintainer)
++Build-Depends: debhelper (>= @(debhelper_version).0.0), @(', '.join(BuildDepends))
++Homepage: @(Homepage)
++Standards-Version: 3.9.2
++
++Package: @(Package)
++Architecture: any
++Depends: ${shlibs:Depends}, ${misc:Depends}, @(', '.join(Depends))
++@[if Conflicts]Conflicts: @(', '.join(Conflicts))@\n@[end if]@
++@[if Replaces]Replaces: @(', '.join(Replaces))@\n@[end if]@
++Description: @(Description)
+diff --git a/debian/gbp.conf.em b/debian/gbp.conf.em
+new file mode 100644
+index 0000000..ad24a16
+--- /dev/null
++++ b/debian/gbp.conf.em
+@@ -0,0 +1,3 @@
++[git-buildpackage]
++upstream-tag=@(release_tag)
++upstream-tree=tag
+diff --git a/debian/rules.em b/debian/rules.em
+new file mode 100755
+index 0000000..1c02dd4
+--- /dev/null
++++ b/debian/rules.em
+@@ -0,0 +1,61 @@
++#!/usr/bin/make -f
++# -*- makefile -*-
++# Sample debian/rules that uses debhelper.
++# This file was originally written by Joey Hess and Craig Small.
++# As a special exception, when this file is copied by dh-make into a
++# dh-make output file, you may use that output file without restriction.
++# This special exception was added by Craig Small in version 0.37 of dh-make.
++
++# Uncomment this to turn on verbose mode.
++export DH_VERBOSE=1
++# TODO: remove the LDFLAGS override.  It's here to avoid esoteric problems
++# of this sort:
++#  https://code.ros.org/trac/ros/ticket/2977
++#  https://code.ros.org/trac/ros/ticket/3842
++export LDFLAGS=
++export PKG_CONFIG_PATH=@(InstallationPrefix)/lib/pkgconfig
++# Explicitly enable -DNDEBUG, see:
++# 	https://github.com/ros-infrastructure/bloom/issues/327
++export DEB_CXXFLAGS_MAINT_APPEND=-DNDEBUG
++
++%:
++	dh $@@ -v --buildsystem=cmake
++
++override_dh_auto_configure:
++	# In case we're installing to a non-standard location, look for a setup.sh
++	# in the install tree that was dropped by catkin, and source it.  It will
++	# set things like CMAKE_PREFIX_PATH, PKG_CONFIG_PATH, and PYTHONPATH.
++	if [ -f "@(InstallationPrefix)/setup.sh" ]; then . "@(InstallationPrefix)/setup.sh"; fi && \
++	dh_auto_configure -- \
++		-DCATKIN_BUILD_BINARY_PACKAGE="1" \
++		-DCMAKE_INSTALL_PREFIX="@(InstallationPrefix)" \
++		-DCMAKE_PREFIX_PATH="@(InstallationPrefix)"
++
++override_dh_auto_build:
++	# In case we're installing to a non-standard location, look for a setup.sh
++	# in the install tree that was dropped by catkin, and source it.  It will
++	# set things like CMAKE_PREFIX_PATH, PKG_CONFIG_PATH, and PYTHONPATH.
++	if [ -f "@(InstallationPrefix)/setup.sh" ]; then . "@(InstallationPrefix)/setup.sh"; fi && \
++	dh_auto_build
++
++override_dh_auto_test:
++	# In case we're installing to a non-standard location, look for a setup.sh
++	# in the install tree that was dropped by catkin, and source it.  It will
++	# set things like CMAKE_PREFIX_PATH, PKG_CONFIG_PATH, and PYTHONPATH.
++	echo -- Running tests. Even if one of them fails the build is not canceled.
++	if [ -f "@(InstallationPrefix)/setup.sh" ]; then . "@(InstallationPrefix)/setup.sh"; fi && \
++	dh_auto_test || true
++
++override_dh_shlibdeps:
++	# In case we're installing to a non-standard location, look for a setup.sh
++	# in the install tree that was dropped by catkin, and source it.  It will
++	# set things like CMAKE_PREFIX_PATH, PKG_CONFIG_PATH, and PYTHONPATH.
++	if [ -f "@(InstallationPrefix)/setup.sh" ]; then . "@(InstallationPrefix)/setup.sh"; fi && \
++	dh_shlibdeps -l$(CURDIR)/debian/@(Package)/@(InstallationPrefix)/lib/
++
++override_dh_auto_install:
++	# In case we're installing to a non-standard location, look for a setup.sh
++	# in the install tree that was dropped by catkin, and source it.  It will
++	# set things like CMAKE_PREFIX_PATH, PKG_CONFIG_PATH, and PYTHONPATH.
++	if [ -f "@(InstallationPrefix)/setup.sh" ]; then . "@(InstallationPrefix)/setup.sh"; fi && \
++	dh_auto_install
+diff --git a/debian/source/format.em b/debian/source/format.em
+new file mode 100644
+index 0000000..9666bf4
+--- /dev/null
++++ b/debian/source/format.em
+@@ -0,0 +1 @@
++3.0 (@(format))
+diff --git a/debian/source/options.em b/debian/source/options.em
+new file mode 100644
+index 0000000..8c4c78b
+--- /dev/null
++++ b/debian/source/options.em
+@@ -0,0 +1,6 @@
++@[if format and format == 'quilt']@
++# Automatically add upstream changes to the quilt overlay.
++# http://manpages.ubuntu.com/manpages/trusty/man1/dpkg-source.1.html
++# This supports reusing the orig.tar.gz for debian increments.
++auto-commit
++@[end if]
+-- 
+2.8.1
+
