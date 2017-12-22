@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 
   trans.run();
 
-  return EXIT_SUCCESS;
+  return 0;
 }
 
 
