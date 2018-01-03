@@ -110,11 +110,11 @@ tracks:
     patches: null
     release_inc: '0'
     release_repo_url: null
-    release_tag: 2.4.0
+    release_tag: :{version}
     ros_distro: kinetic
     vcs_type: git
     vcs_uri: https://github.com/cra-ros-pkg/robot_localization.git
-    version: 2.4.0
+    version: :{auto}
   lunar:
     actions:
     - bloom-export-upstream :{vcs_local_uri} :{vcs_type} --tag :{release_tag} --display-uri
