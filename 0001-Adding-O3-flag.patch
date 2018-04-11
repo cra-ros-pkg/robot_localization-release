@@ -1,4 +1,4 @@
-From 8cd3786e34accd8996551d42929d2a0d671b285d Mon Sep 17 00:00:00 2001
+From 92ed54519db09958d8671edc9080493985e1bbd1 Mon Sep 17 00:00:00 2001
 From: Tom Moore <tmoore@locusrobotics.com>
 Date: Thu, 21 Dec 2017 23:14:11 +0000
 Subject: [PATCH] Adding O3 flag
@@ -21,5 +21,5 @@ index 1c02dd4..abc62d2 100755
  %:
  	dh $@@ -v --buildsystem=cmake
 -- 
-1.9.1
+2.14.1
 
