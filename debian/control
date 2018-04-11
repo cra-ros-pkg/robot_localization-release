@@ -1,0 +1,12 @@
+Source: ros-lunar-robot-localization
+Section: misc
+Priority: extra
+Maintainer: Tom Moore <ayrton04@gmail.com>
+Build-Depends: debhelper (>= 9.0.0), libeigen3-dev, libyaml-cpp-dev, python-catkin-pkg, ros-lunar-catkin, ros-lunar-cmake-modules, ros-lunar-diagnostic-msgs, ros-lunar-diagnostic-updater, ros-lunar-eigen-conversions, ros-lunar-geographic-msgs, ros-lunar-geometry-msgs, ros-lunar-message-filters, ros-lunar-message-generation, ros-lunar-nav-msgs, ros-lunar-nodelet, ros-lunar-rosbag, ros-lunar-roscpp, ros-lunar-roslint, ros-lunar-rostest, ros-lunar-rosunit, ros-lunar-sensor-msgs, ros-lunar-std-msgs, ros-lunar-std-srvs, ros-lunar-tf2, ros-lunar-tf2-geometry-msgs, ros-lunar-tf2-ros, ros-lunar-xmlrpcpp
+Homepage: http://ros.org/wiki/robot_localization
+Standards-Version: 3.9.2
+
+Package: ros-lunar-robot-localization
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libeigen3-dev, libyaml-cpp-dev, ros-lunar-cmake-modules, ros-lunar-diagnostic-msgs, ros-lunar-diagnostic-updater, ros-lunar-eigen-conversions, ros-lunar-geographic-msgs, ros-lunar-geometry-msgs, ros-lunar-message-filters, ros-lunar-message-runtime, ros-lunar-nav-msgs, ros-lunar-nodelet, ros-lunar-roscpp, ros-lunar-sensor-msgs, ros-lunar-std-msgs, ros-lunar-std-srvs, ros-lunar-tf2, ros-lunar-tf2-geometry-msgs, ros-lunar-tf2-ros, ros-lunar-xmlrpcpp
+Description: Provides nonlinear state estimation through sensor fusion of an abritrary number of sensors.
