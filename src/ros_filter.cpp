@@ -567,11 +567,13 @@ namespace RobotLocalization
                  " seconds in the past. Reverting filter state and measurement queue...");
 
         int originalCount = static_cast<int>(measurementQueue_.size());
-        if (!revertTo(firstMeasurement->time_ - 1e-9))
+        const double firstMeasurementTime =  firstMeasurement->time_;
+        const std::string firstMeasurementTopic =  firstMeasurement->topicName_;
+        if (!revertTo(firstMeasurement->time_ - 1e-9))  // revertTo may invalidate firstMeasurement
         {
-          RF_DEBUG("ERROR: history interval is too small to revert to time " << firstMeasurement->time_ << "\n");
+          RF_DEBUG("ERROR: history interval is too small to revert to time " << firstMeasurementTime << "\n");
           ROS_WARN_STREAM_DELAYED_THROTTLE(historyLength_, "Received old measurement for topic " <<
-            firstMeasurement->topicName_ << ", but history interval is insufficiently sized to revert state and "
+              firstMeasurementTopic << ", but history interval is insufficiently sized to revert state and "
             "measurement queue.");
           restoredMeasurementCount = 0;
         }
@@ -1810,6 +1812,14 @@ namespace RobotLocalization
       worldBaseLinkTransMsg_.transform.translation.y = filteredPosition.pose.pose.position.y;
       worldBaseLinkTransMsg_.transform.translation.z = filteredPosition.pose.pose.position.z;
       worldBaseLinkTransMsg_.transform.rotation = filteredPosition.pose.pose.orientation;
+
+      // the filteredPosition is the message containing the state and covariances: nav_msgs Odometry
+
+      if (!validateFilterOutput(filteredPosition))
+      {
+        ROS_ERROR_STREAM("Critical Error, NaNs were detected in the output state of the filter." <<
+              " This was likely due to poorly coniditioned process, noise, or sensor covariances.");
+      }
 
       // If the worldFrameId_ is the odomFrameId_ frame, then we can just send the transform. If the
       // worldFrameId_ is the mapFrameId_ frame, we'll have some work to do.
@@ -3050,6 +3060,24 @@ namespace RobotLocalization
     RF_DEBUG("\n----- /RosFilter::revertTo\n");
 
     return retVal;
+  }
+
+  template<typename T>
+  bool RosFilter<T>::validateFilterOutput(const nav_msgs::Odometry &message)
+  {
+    return !std::isnan(message.pose.pose.position.x) && !std::isinf(message.pose.pose.position.x) &&
+           !std::isnan(message.pose.pose.position.y) && !std::isinf(message.pose.pose.position.y) &&
+           !std::isnan(message.pose.pose.position.z) && !std::isinf(message.pose.pose.position.z) &&
+           !std::isnan(message.pose.pose.orientation.x) && !std::isinf(message.pose.pose.orientation.x) &&
+           !std::isnan(message.pose.pose.orientation.y) && !std::isinf(message.pose.pose.orientation.y) &&
+           !std::isnan(message.pose.pose.orientation.z) && !std::isinf(message.pose.pose.orientation.z) &&
+           !std::isnan(message.pose.pose.orientation.w) && !std::isinf(message.pose.pose.orientation.w) &&
+           !std::isnan(message.twist.twist.linear.x) && !std::isinf(message.twist.twist.linear.x) &&
+           !std::isnan(message.twist.twist.linear.y) && !std::isinf(message.twist.twist.linear.y) &&
+           !std::isnan(message.twist.twist.linear.z) && !std::isinf(message.twist.twist.linear.z) &&
+           !std::isnan(message.twist.twist.angular.x) && !std::isinf(message.twist.twist.angular.x) &&
+           !std::isnan(message.twist.twist.angular.y) && !std::isinf(message.twist.twist.angular.y) &&
+           !std::isnan(message.twist.twist.angular.z) && !std::isinf(message.twist.twist.angular.z);
   }
 
   template<typename T>
