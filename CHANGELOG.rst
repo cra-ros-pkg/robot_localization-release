@@ -2,32 +2,22 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.5.1 (2018-01-03)
+2.3.4 (2018-04-11)
 ------------------
-* Fixing CMakeLists
+* Fixing issue with potential seg fault
 * Contributors: Tom Moore
 
-2.5.0 (2017-12-15)
+2.3.3 (2017-12-15)
 ------------------
-* Fixing datum precision
-* Fixing timing variable
-* Fixing state history reversion
-* Fixing critical bug with dynamic process noise covariance
-* Fix typo in reading Mahalanobis thresholds.
 * Zero out rotation in GPS to base_link transform
-* Update xmlrpcpp includes for Indigo support
-* Removing lastUpdateTime
-* Fixing timestamps in map->odom transform
-* Simplify enabledAtStartup logic
-* Add std_srvs dependency
-* Add enabling service
-* Ensure all raw sensor input orientations are normalized even if messages are not
-* Install params directory.
-* Add robot localization estimator
-* Adding nodelet support
-* Contributors: Jacob Perron, Jacob Seibert, Jiri Hubacek, Mike Purvis, Miquel Massot, Pavlo Kolomiiets, Rein Appeldoorn, Rokus Ottervanger, Simon Gene Gottlieb, Tom Moore, stevemacenski
+* Fix typo in reading Mahalanobis thresholds.
+* Fixing state history reversion
+* Some trivial changes to lessen the differences to lunar
+* Fixing critical bug with dynamic process noise covariance
+* Fixing datum precision
+* Contributors: Jacob Seibert, Pavlo Kolomiiets, Tom Moore
 
-2.4.0 (2017-06-12)
+2.3.2 (2017-06-06)
 ------------------
 * Updated documentation
 * Added reset_on_time_jump option
