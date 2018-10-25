@@ -2,6 +2,13 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.4.4 (2018-10-25)
+------------------
+* Adding more output for measurement history failures
+* Adding filter processing toggle service
+* Waiting for valid ROS time before starting navsat_transform_node
+* Contributors: Tom Moore, stevemacenski
+
 2.4.3 (2018-04-11)
 ------------------
 * Add published accel topic to documentation
