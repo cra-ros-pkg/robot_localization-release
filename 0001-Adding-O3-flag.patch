@@ -1,4 +1,4 @@
-From 3de3905147acc0d777c1b32a412394c01501dde4 Mon Sep 17 00:00:00 2001
+From 841b6db8b1822fe0a857da8680463e2e38ff5d80 Mon Sep 17 00:00:00 2001
 From: Tom Moore <tmoore@locusrobotics.com>
 Date: Wed, 3 Jan 2018 10:46:26 +0000
 Subject: [PATCH] Adding O3 flag
