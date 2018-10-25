@@ -1,4 +1,4 @@
-From 02f96b965a39dc6305591496338d6f7d7d9255a2 Mon Sep 17 00:00:00 2001
+From 981e9548901e7425c6b8b99c040723d5e1773d33 Mon Sep 17 00:00:00 2001
 From: Tom Moore <ayrton04@gmail.com>
 Date: Fri, 25 May 2018 20:56:48 +0100
 Subject: [PATCH] Update rules.em
@@ -22,5 +22,5 @@ index 1c02dd4..abc62d2 100755
  %:
  	dh $@@ -v --buildsystem=cmake
 -- 
-2.8.1
+2.7.4
 
