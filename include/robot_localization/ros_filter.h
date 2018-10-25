@@ -38,6 +38,7 @@
 #include "robot_localization/filter_base.h"
 
 #include <robot_localization/SetPose.h>
+#include <robot_localization/ToggleFilterProcessing.h>
 
 #include <ros/ros.h>
 #include <std_msgs/String.h>
@@ -110,7 +111,7 @@ template<class T> class RosFilter
     //! The RosFilter constructor makes sure that anyone using
     //! this template is doing so with the correct object type
     //!
-    explicit RosFilter(ros::NodeHandle nh, ros::NodeHandle nh_priv, std::vector<double> args = std::vector<double>());
+    explicit RosFilter(std::vector<double> args = std::vector<double>());
 
     //! @brief Destructor
     //!
@@ -118,13 +119,16 @@ template<class T> class RosFilter
     //!
     ~RosFilter();
 
-    //! @brief Initialize filter
-    //
-    void initialize();
-
     //! @brief Resets the filter to its initial state
     //!
     void reset();
+
+    //! @brief Service callback to toggle processing measurements for a standby mode but continuing to publish
+    //! @param[in] request - The state requested, on (True) or off (False)
+    //! @param[out] response - status if upon success
+    //! @return boolean true if successful, false if not
+    bool toggleFilterProcessingCallback(robot_localization::ToggleFilterProcessing::Request&,
+                                        robot_localization::ToggleFilterProcessing::Response&);
 
     //! @brief Callback method for receiving all acceleration (IMU) messages
     //! @param[in] msg - The ROS IMU message to take in.
@@ -233,6 +237,10 @@ template<class T> class RosFilter
                       const std::string &targetFrame,
                       const bool imuData);
 
+    //! @brief Main run method
+    //!
+    void run();
+
     //! @brief Callback method for manually setting/resetting the internal pose estimate
     //! @param[in] msg - The ROS stamped pose with covariance message to take in
     //!
@@ -289,6 +297,10 @@ template<class T> class RosFilter
     //! @param[in] cutoffTime - Measurements and states older than this time will be dropped.
     //!
     void clearExpiredHistory(const double cutoffTime);
+
+    //! @brief Clears measurement queue
+    //!
+    void clearMeasurementQueue();
 
     //! @brief Adds a diagnostic message to the accumulating map and updates the error level
     //! @param[in] errLevel - The error level of the diagnostic
@@ -394,12 +406,6 @@ template<class T> class RosFilter
                       std::vector<int> &updateVector,
                       Eigen::VectorXd &measurement,
                       Eigen::MatrixXd &measurementCovariance);
-
-
-    //! @brief callback function which is called for periodic updates
-    //!
-    void periodicUpdate(const ros::TimerEvent& event);
-
 
     //! @brief tf frame name for the robot's body frame
     //!
@@ -574,6 +580,11 @@ template<class T> class RosFilter
     //!
     ros::ServiceServer enableFilterSrv_;
 
+    //! @brief Service that allows another node to toggle on/off filter processing while still publishing.
+    //! Uses a robot_localization ToggleFilterProcessing service.
+    //!
+    ros::ServiceServer toggleFilterProcessingSrv_;
+
     //! @brief Contains the state vector variable names in string format
     //!
     std::vector<std::string> stateVariableNames_;
@@ -616,6 +627,9 @@ template<class T> class RosFilter
     //! @brief Whether the filter is enabled or not. See disabledAtStartup_.
     bool enabled_;
 
+    //! $brief Whether the filter should process new measurements or not.
+    bool toggledOn_;
+
     //! @brief Message that contains our latest transform (i.e., state)
     //!
     //! We use the vehicle's latest state in a number of places, and often
@@ -647,38 +661,6 @@ template<class T> class RosFilter
     // front() refers to the measurement with the earliest timestamp.
     // back() refers to the measurement with the latest timestamp.
     MeasurementHistoryDeque measurementHistory_;
-
-    //! @brief broadcaster of worldTransform tfs
-    //!
-    tf2_ros::TransformBroadcaster worldTransformBroadcaster_;
-
-
-    //! @brief position publisher
-    //!
-    ros::Publisher positionPub_;
-
-    //! @brief optional acceleration publisher
-    //!
-    ros::Publisher accelPub_;
-
-    //! @brief optional signaling diagnostic frequency
-    //!
-    std::auto_ptr<diagnostic_updater::HeaderlessTopicDiagnostic> freqDiag_;
-
-    //! @brief last call of periodicUpdate
-    //!
-    ros::Time lastDiagTime_;
-
-    //! @brief timer calling periodicUpdate
-    //!
-    ros::Timer periodicUpdateTimer_;
-
-    //! @brief minimal frequency
-    //!
-    double minFrequency_;
-
-    //! @brief maximal frequency
-    double maxFrequency_;
 };
 
 }  // namespace RobotLocalization
