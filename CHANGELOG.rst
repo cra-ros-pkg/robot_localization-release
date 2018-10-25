@@ -2,22 +2,17 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.6.2 (2018-10-25)
+2.5.4 (2018-10-25)
 ------------------
-* Fixing tests
+* Linting
 * Contributors: Tom Moore
 
-2.6.1 (2018-10-25)
+2.5.3 (2018-10-25)
 ------------------
 * Adding more output for measurement history failures
 * Adding filter processing toggle service
 * Waiting for valid ROS time before starting navsat_transform_node
 * Contributors: Tom Moore, stevemacenski
-
-2.6.0 (2018-07-27)
-------------------
-* Moving to C++14, adding error flags, and fixing all warnings
-* Contributors: Tom Moore
 
 2.5.2 (2018-04-11)
 ------------------
