@@ -43,10 +43,11 @@
 #include <utility>
 #include <vector>
 #include <limits>
+
 namespace RobotLocalization
 {
   template<typename T>
-  RosFilter<T>::RosFilter(ros::NodeHandle nh, ros::NodeHandle nh_priv, std::vector<double> args) :
+  RosFilter<T>::RosFilter(std::vector<double> args) :
       staticDiagErrorLevel_(diagnostic_msgs::DiagnosticStatus::OK),
       tfListener_(tfBuffer_),
       dynamicDiagErrorLevel_(diagnostic_msgs::DiagnosticStatus::OK),
@@ -57,8 +58,7 @@ namespace RobotLocalization
       latestControl_(),
       latestControlTime_(0),
       tfTimeout_(ros::Duration(0)),
-      nh_(nh),
-      nhLocal_(nh_priv),
+      nhLocal_("~"),
       predictToCurrentTime_(false),
       printDiagnostics_(true),
       gravitationalAcc_(9.80665),
@@ -94,41 +94,6 @@ namespace RobotLocalization
   RosFilter<T>::~RosFilter()
   {
     topicSubs_.clear();
-  }
-
-  template<typename T>
-  void RosFilter<T>::initialize()
-  {
-    ros::Time::init();
-
-    loadParams();
-
-    if (printDiagnostics_)
-    {
-      diagnosticUpdater_.add("Filter diagnostic updater", this, &RosFilter<T>::aggregateDiagnostics);
-    }
-
-    // Set up the frequency diagnostic
-    minFrequency_ = frequency_ - 2;
-    maxFrequency_ = frequency_ + 2;
-    freqDiag_.reset(new diagnostic_updater::HeaderlessTopicDiagnostic("odometry/filtered",
-                                                              diagnosticUpdater_,
-                                                              diagnostic_updater::FrequencyStatusParam(&minFrequency_,
-                                                                                                    &maxFrequency_,
-                                                                                                    0.1, 10)));
-
-    // Publisher
-    positionPub_ = nh_.advertise<nav_msgs::Odometry>("odometry/filtered", 20);
-
-    // Optional acceleration publisher
-    if (publishAcceleration_)
-    {
-      accelPub_ = nh_.advertise<geometry_msgs::AccelWithCovarianceStamped>("accel/filtered", 20);
-    }
-
-    lastDiagTime_ = ros::Time::now();
-
-    periodicUpdateTimer_ = nh_.createTimer(ros::Duration(1./frequency_), &RosFilter<T>::periodicUpdate, this);
   }
 
   template<typename T>
@@ -1661,7 +1626,6 @@ namespace RobotLocalization
                     stream.str(),
                     false);
       RF_DEBUG("Received message that preceded the most recent pose reset. Ignoring...");
-
       return;
     }
 
@@ -1795,157 +1759,228 @@ namespace RobotLocalization
   }
 
   template<typename T>
-  void RosFilter<T>::periodicUpdate(const ros::TimerEvent& event)
+  void RosFilter<T>::run()
   {
-    // Warn the user if the update took too long (> 2 cycles)
-    const double loop_elapsed = (event.current_real - event.last_expected).toSec();
-    if (loop_elapsed > 2./frequency_)
+    ROS_INFO("Waiting for valid clock time...");
+    ros::Time::waitForValid();
+    ROS_INFO("Valid clock time received. Starting node.");
+
+    loadParams();
+
+    if (printDiagnostics_)
     {
-      ROS_WARN_STREAM("Failed to meet update rate! Took " << std::setprecision(20) << loop_elapsed);
+      diagnosticUpdater_.add("Filter diagnostic updater", this, &RosFilter<T>::aggregateDiagnostics);
     }
+
+    // Set up the frequency diagnostic
+    double minFrequency = frequency_ - 2;
+    double maxFrequency = frequency_ + 2;
+    diagnostic_updater::HeaderlessTopicDiagnostic freqDiag("odometry/filtered",
+                                                           diagnosticUpdater_,
+                                                           diagnostic_updater::FrequencyStatusParam(&minFrequency,
+                                                                                                    &maxFrequency,
+                                                                                                    0.1, 10));
+
+    // We may need to broadcast a different transform than
+    // the one we've already calculated.
+    tf2::Transform mapOdomTrans;
+    tf2::Transform odomBaseLinkTrans;
+    geometry_msgs::TransformStamped mapOdomTransMsg;
+    ros::Time curTime;
+    ros::Time lastDiagTime = ros::Time::now();
+
+    // Clear out the transforms
+    worldBaseLinkTransMsg_.transform = tf2::toMsg(tf2::Transform::getIdentity());
+    mapOdomTransMsg.transform = tf2::toMsg(tf2::Transform::getIdentity());
+
+    // Publisher
+    ros::Publisher positionPub = nh_.advertise<nav_msgs::Odometry>("odometry/filtered", 20);
+    tf2_ros::TransformBroadcaster worldTransformBroadcaster;
+
+    // Optional acceleration publisher
+    ros::Publisher accelPub;
+    if (publishAcceleration_)
+    {
+      accelPub = nh_.advertise<geometry_msgs::AccelWithCovarianceStamped>("accel/filtered", 20);
+    }
+
+    const ros::Duration loop_cycle_time(1.0 / frequency_);
+    ros::Time loop_end_time = ros::Time::now();
 
     // Wait for the filter to be enabled
-    if (!enabled_)
+    while (!enabled_ && ros::ok())
     {
-      ROS_INFO_STREAM_ONCE("Filter is disabled. To enable it call the " << enableFilterSrv_.getService() <<
-        " service");
-      return;
-    }
-
-    ros::Time curTime = ros::Time::now();
-
-    if (toggledOn_)
-    {
-      // Now we'll integrate any measurements we've received if requested
-      integrateMeasurements(curTime);
-    }
-    else
-    {
-      // clear out measurements since we're not currently processing new entries
-      clearMeasurementQueue();
-
-      // Reset last measurement time so we don't get a large time delta on toggle on
-      if (filter_.getInitializedStatus())
+      ROS_WARN_STREAM_ONCE("[" << ros::this_node::getName() <<
+        ":] This filter is disabled. To enable it call the service " << ros::this_node::getName() << "/enable");
+      ros::spinOnce();
+      if (enabled_)
       {
-        filter_.setLastMeasurementTime(ros::Time::now().toSec());
+        break;
       }
     }
 
-    // Get latest state and publish it
-    nav_msgs::Odometry filteredPosition;
-
-    if (getFilteredOdometryMessage(filteredPosition))
+    while (ros::ok())
     {
-      worldBaseLinkTransMsg_.transform = tf2::toMsg(tf2::Transform::getIdentity());
-      worldBaseLinkTransMsg_.header.stamp = filteredPosition.header.stamp + tfTimeOffset_;
-      worldBaseLinkTransMsg_.header.frame_id = filteredPosition.header.frame_id;
-      worldBaseLinkTransMsg_.child_frame_id = filteredPosition.child_frame_id;
+      // The spin will call all the available callbacks and enqueue
+      // their received measurements
+      ros::spinOnce();
+      curTime = ros::Time::now();
 
-      worldBaseLinkTransMsg_.transform.translation.x = filteredPosition.pose.pose.position.x;
-      worldBaseLinkTransMsg_.transform.translation.y = filteredPosition.pose.pose.position.y;
-      worldBaseLinkTransMsg_.transform.translation.z = filteredPosition.pose.pose.position.z;
-      worldBaseLinkTransMsg_.transform.rotation = filteredPosition.pose.pose.orientation;
-
-      // the filteredPosition is the message containing the state and covariances: nav_msgs Odometry
-
-      if (!validateFilterOutput(filteredPosition))
+      if (toggledOn_)
       {
-        ROS_ERROR_STREAM("Critical Error, NaNs were detected in the output state of the filter." <<
-              " This was likely due to poorly coniditioned process, noise, or sensor covariances.");
+        // Now we'll integrate any measurements we've received if requested
+        integrateMeasurements(curTime);
       }
-
-      // If the worldFrameId_ is the odomFrameId_ frame, then we can just send the transform. If the
-      // worldFrameId_ is the mapFrameId_ frame, we'll have some work to do.
-      if (publishTransform_)
+      else
       {
-        if (filteredPosition.header.frame_id == odomFrameId_)
+        // clear out measurements since we're not currently processing new entries
+        clearMeasurementQueue();
+
+        // Reset last measurement time so we don't get a large time delta on toggle on
+        if (filter_.getInitializedStatus())
         {
-          worldTransformBroadcaster_.sendTransform(worldBaseLinkTransMsg_);
+          filter_.setLastMeasurementTime(ros::Time::now().toSec());
         }
-        else if (filteredPosition.header.frame_id == mapFrameId_)
+      }
+
+      // Get latest state and publish it
+      nav_msgs::Odometry filteredPosition;
+
+      if (getFilteredOdometryMessage(filteredPosition))
+      {
+        worldBaseLinkTransMsg_.header.stamp = filteredPosition.header.stamp + tfTimeOffset_;
+        worldBaseLinkTransMsg_.header.frame_id = filteredPosition.header.frame_id;
+        worldBaseLinkTransMsg_.child_frame_id = filteredPosition.child_frame_id;
+
+        worldBaseLinkTransMsg_.transform.translation.x = filteredPosition.pose.pose.position.x;
+        worldBaseLinkTransMsg_.transform.translation.y = filteredPosition.pose.pose.position.y;
+        worldBaseLinkTransMsg_.transform.translation.z = filteredPosition.pose.pose.position.z;
+        worldBaseLinkTransMsg_.transform.rotation = filteredPosition.pose.pose.orientation;
+
+        // the filteredPosition is the message containing the state and covariances: nav_msgs Odometry
+
+        if (!validateFilterOutput(filteredPosition))
         {
-          try
+          ROS_ERROR_STREAM("Critical Error, NaNs were detected in the output state of the filter." <<
+                " This was likely due to poorly coniditioned process, noise, or sensor covariances.");
+        }
+
+        // If the worldFrameId_ is the odomFrameId_ frame, then we can just send the transform. If the
+        // worldFrameId_ is the mapFrameId_ frame, we'll have some work to do.
+        if (publishTransform_)
+        {
+          if (filteredPosition.header.frame_id == odomFrameId_)
           {
-            tf2::Transform worldBaseLinkTrans;
-            tf2::fromMsg(worldBaseLinkTransMsg_.transform, worldBaseLinkTrans);
-
-            tf2::Transform odomBaseLinkTrans;
-            tf2::fromMsg(tfBuffer_.lookupTransform(baseLinkFrameId_, odomFrameId_, ros::Time(0)).transform,
-                         odomBaseLinkTrans);
-
-            /*
-             * First, see these two references:
-             * http://wiki.ros.org/tf/Overview/Using%20Published%20Transforms#lookupTransform
-             * http://wiki.ros.org/geometry/CoordinateFrameConventions#Transform_Direction
-             * We have a transform from mapFrameId_->baseLinkFrameId_, but it would actually transform
-             * a given pose from baseLinkFrameId_->mapFrameId_. We then used lookupTransform, whose
-             * first two arguments are target frame and source frame, to get a transform from
-             * baseLinkFrameId_->odomFrameId_. However, this transform would actually transform data
-             * from odomFrameId_->baseLinkFrameId_. Now imagine that we have a position in the
-             * mapFrameId_ frame. First, we multiply it by the inverse of the
-             * mapFrameId_->baseLinkFrameId, which will transform that data from mapFrameId_ to
-             * baseLinkFrameId_. Now we want to go from baseLinkFrameId_->odomFrameId_, but the
-             * transform we have takes data from odomFrameId_->baseLinkFrameId_, so we need its
-             * inverse as well. We have now transformed our data from mapFrameId_ to odomFrameId_.
-             * However, if we want other users to be able to do the same, we need to broadcast
-             * the inverse of that entire transform.
-            */
-
-            tf2::Transform mapOdomTrans;
-            mapOdomTrans.mult(worldBaseLinkTrans, odomBaseLinkTrans);
-
-            geometry_msgs::TransformStamped mapOdomTransMsg;
-            mapOdomTransMsg.transform = tf2::toMsg(mapOdomTrans);
-            mapOdomTransMsg.header.stamp = filteredPosition.header.stamp + tfTimeOffset_;
-            mapOdomTransMsg.header.frame_id = mapFrameId_;
-            mapOdomTransMsg.child_frame_id = odomFrameId_;
-
-            worldTransformBroadcaster_.sendTransform(mapOdomTransMsg);
+            worldTransformBroadcaster.sendTransform(worldBaseLinkTransMsg_);
           }
-          catch(...)
+          else if (filteredPosition.header.frame_id == mapFrameId_)
           {
-            ROS_ERROR_STREAM_DELAYED_THROTTLE(5.0, "Could not obtain transform from "
-                                              << odomFrameId_ << "->" << baseLinkFrameId_);
+            try
+            {
+              tf2::Transform worldBaseLinkTrans;
+              tf2::fromMsg(worldBaseLinkTransMsg_.transform, worldBaseLinkTrans);
+
+              if (!RosFilterUtilities::lookupTransformSafe(
+                     tfBuffer_,
+                     baseLinkFrameId_,
+                     odomFrameId_,
+                     ros::Time(filter_.getLastMeasurementTime()),
+                     odomBaseLinkTrans,
+                     true))
+              {
+                ROS_ERROR_STREAM_DELAYED_THROTTLE(1.0, "Unable to retrieve " << odomFrameId_ << "->" <<
+                  baseLinkFrameId_ << " transform. Skipping iteration...");
+                continue;
+              }
+
+              /*
+               * First, see these two references:
+               * http://wiki.ros.org/tf/Overview/Using%20Published%20Transforms#lookupTransform
+               * http://wiki.ros.org/geometry/CoordinateFrameConventions#Transform_Direction
+               * We have a transform from mapFrameId_->baseLinkFrameId_, but it would actually transform
+               * a given pose from baseLinkFrameId_->mapFrameId_. We then used lookupTransform, whose
+               * first two arguments are target frame and source frame, to get a transform from
+               * baseLinkFrameId_->odomFrameId_. However, this transform would actually transform data
+               * from odomFrameId_->baseLinkFrameId_. Now imagine that we have a position in the
+               * mapFrameId_ frame. First, we multiply it by the inverse of the
+               * mapFrameId_->baseLinkFrameId, which will transform that data from mapFrameId_ to
+               * baseLinkFrameId_. Now we want to go from baseLinkFrameId_->odomFrameId_, but the
+               * transform we have takes data from odomFrameId_->baseLinkFrameId_, so we need its
+               * inverse as well. We have now transformed our data from mapFrameId_ to odomFrameId_.
+               * However, if we want other users to be able to do the same, we need to broadcast
+               * the inverse of that entire transform.
+              */
+
+              mapOdomTrans.mult(worldBaseLinkTrans, odomBaseLinkTrans);
+
+              mapOdomTransMsg.transform = tf2::toMsg(mapOdomTrans);
+              mapOdomTransMsg.header.stamp = filteredPosition.header.stamp + tfTimeOffset_;
+              mapOdomTransMsg.header.frame_id = mapFrameId_;
+              mapOdomTransMsg.child_frame_id = odomFrameId_;
+
+              worldTransformBroadcaster.sendTransform(mapOdomTransMsg);
+            }
+            catch(...)
+            {
+              ROS_ERROR_STREAM_DELAYED_THROTTLE(5.0, "Could not obtain transform from "
+                                                << odomFrameId_ << "->" << baseLinkFrameId_);
+            }
+          }
+          else
+          {
+            ROS_ERROR_STREAM("Odometry message frame_id was " << filteredPosition.header.frame_id <<
+                             ", expected " << mapFrameId_ << " or " << odomFrameId_);
           }
         }
-        else
+
+        // Fire off the position and the transform
+        positionPub.publish(filteredPosition);
+
+        if (printDiagnostics_)
         {
-          ROS_ERROR_STREAM("Odometry message frame_id was " << filteredPosition.header.frame_id <<
-                           ", expected " << mapFrameId_ << " or " << odomFrameId_);
+          freqDiag.tick();
         }
       }
 
-      // Fire off the position and the transform
-      positionPub_.publish(filteredPosition);
-
-      if (printDiagnostics_)
+      // Publish the acceleration if desired and filter is initialized
+      geometry_msgs::AccelWithCovarianceStamped filteredAcceleration;
+      if (publishAcceleration_ && getFilteredAccelMessage(filteredAcceleration))
       {
-        freqDiag_->tick();
+        accelPub.publish(filteredAcceleration);
       }
-    }
 
-    // Publish the acceleration if desired and filter is initialized
-    geometry_msgs::AccelWithCovarianceStamped filteredAcceleration;
-    if (publishAcceleration_ && getFilteredAccelMessage(filteredAcceleration))
-    {
-      accelPub_.publish(filteredAcceleration);
-    }
+      /* Diagnostics can behave strangely when playing back from bag
+       * files and using simulated time, so we have to check for
+       * time suddenly moving backwards as well as the standard
+       * timeout criterion before publishing. */
+      double diagDuration = (curTime - lastDiagTime).toSec();
+      if (printDiagnostics_ && (diagDuration >= diagnosticUpdater_.getPeriod() || diagDuration < 0.0))
+      {
+        diagnosticUpdater_.force_update();
+        lastDiagTime = curTime;
+      }
 
-    /* Diagnostics can behave strangely when playing back from bag
-     * files and using simulated time, so we have to check for
-     * time suddenly moving backwards as well as the standard
-     * timeout criterion before publishing. */
-    double diagDuration = (curTime - lastDiagTime_).toSec();
-    if (printDiagnostics_ && (diagDuration >= diagnosticUpdater_.getPeriod() || diagDuration < 0.0))
-    {
-      diagnosticUpdater_.force_update();
-      lastDiagTime_ = curTime;
-    }
+      // Clear out expired history data
+      if (smoothLaggedData_)
+      {
+        clearExpiredHistory(filter_.getLastMeasurementTime() - historyLength_);
+      }
 
-    // Clear out expired history data
-    if (smoothLaggedData_)
-    {
-      clearExpiredHistory(filter_.getLastMeasurementTime() - historyLength_);
+      ros::Duration loop_elapsed_time = ros::Time::now() - loop_end_time;
+
+      if (loop_elapsed_time > loop_cycle_time)
+      {
+        ROS_WARN_STREAM_DELAYED_THROTTLE(1.0, "Failed to meet update rate! Took " << std::setprecision(20) <<
+          loop_elapsed_time.toSec() << " seconds. Try decreasing the rate, limiting sensor output frequency, or "
+          "limiting the number of sensors.");
+      }
+      else
+      {
+        ros::Duration sleep_time = loop_cycle_time - loop_elapsed_time;
+        sleep_time.sleep();
+      }
+
+      loop_end_time = ros::Time::now();
     }
   }
 

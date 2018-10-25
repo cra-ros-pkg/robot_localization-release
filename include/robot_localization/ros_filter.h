@@ -111,17 +111,13 @@ template<class T> class RosFilter
     //! The RosFilter constructor makes sure that anyone using
     //! this template is doing so with the correct object type
     //!
-    explicit RosFilter(ros::NodeHandle nh, ros::NodeHandle nh_priv, std::vector<double> args = std::vector<double>());
+    explicit RosFilter(std::vector<double> args = std::vector<double>());
 
     //! @brief Destructor
     //!
     //! Clears out the message filters and topic subscribers.
     //!
     ~RosFilter();
-
-    //! @brief Initialize filter
-    //
-    void initialize();
 
     //! @brief Resets the filter to its initial state
     //!
@@ -240,6 +236,10 @@ template<class T> class RosFilter
                       const CallbackData &callbackData,
                       const std::string &targetFrame,
                       const bool imuData);
+
+    //! @brief Main run method
+    //!
+    void run();
 
     //! @brief Callback method for manually setting/resetting the internal pose estimate
     //! @param[in] msg - The ROS stamped pose with covariance message to take in
@@ -406,12 +406,6 @@ template<class T> class RosFilter
                       std::vector<int> &updateVector,
                       Eigen::VectorXd &measurement,
                       Eigen::MatrixXd &measurementCovariance);
-
-
-    //! @brief callback function which is called for periodic updates
-    //!
-    void periodicUpdate(const ros::TimerEvent& event);
-
 
     //! @brief tf frame name for the robot's body frame
     //!
@@ -633,7 +627,7 @@ template<class T> class RosFilter
     //! @brief Whether the filter is enabled or not. See disabledAtStartup_.
     bool enabled_;
 
-    //! @brief Whether the filter should process new measurements or not.
+    //! $brief Whether the filter should process new measurements or not.
     bool toggledOn_;
 
     //! @brief Message that contains our latest transform (i.e., state)
@@ -667,38 +661,6 @@ template<class T> class RosFilter
     // front() refers to the measurement with the earliest timestamp.
     // back() refers to the measurement with the latest timestamp.
     MeasurementHistoryDeque measurementHistory_;
-
-    //! @brief broadcaster of worldTransform tfs
-    //!
-    tf2_ros::TransformBroadcaster worldTransformBroadcaster_;
-
-
-    //! @brief position publisher
-    //!
-    ros::Publisher positionPub_;
-
-    //! @brief optional acceleration publisher
-    //!
-    ros::Publisher accelPub_;
-
-    //! @brief optional signaling diagnostic frequency
-    //!
-    std::auto_ptr<diagnostic_updater::HeaderlessTopicDiagnostic> freqDiag_;
-
-    //! @brief last call of periodicUpdate
-    //!
-    ros::Time lastDiagTime_;
-
-    //! @brief timer calling periodicUpdate
-    //!
-    ros::Timer periodicUpdateTimer_;
-
-    //! @brief minimal frequency
-    //!
-    double minFrequency_;
-
-    //! @brief maximal frequency
-    double maxFrequency_;
 };
 
 }  // namespace RobotLocalization
