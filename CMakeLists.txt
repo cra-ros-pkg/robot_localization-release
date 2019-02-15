@@ -41,8 +41,10 @@ if(NOT EIGEN3_FOUND)
   set(EIGEN_PACKAGE Eigen)
 endif()
 
+set_directory_properties(PROPERTIES COMPILE_OPTIONS "-std=c++14;-Wall;-Werror")
 add_definitions(-DEIGEN_NO_DEBUG -DEIGEN_MPL2_ONLY)
 
+set(ROSLINT_CPP_OPTS "--filter=-build/c++11,-runtime/references")
 roslint_cpp()
 
 ###################################
@@ -210,6 +212,8 @@ install(FILES nodelet_plugins.xml
 #############
 
 if (CATKIN_ENABLE_TESTING)
+
+  roslint_add_test()
 
   # Not really necessary, but it will cause the build to fail if it's
   # missing, rather than failing once the tests are being executed
