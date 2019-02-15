@@ -365,7 +365,7 @@ namespace RobotLocalization
 
       message.header.stamp = ros::Time(filter_.getLastMeasurementTime());
       message.header.frame_id = worldFrameId_;
-      message.child_frame_id = baseLinkFrameId_;
+      message.child_frame_id = baseLinkOutputFrameId_;
     }
 
     return filter_.getInitializedStatus();
@@ -400,7 +400,7 @@ namespace RobotLocalization
 
       // Fill header information
       message.header.stamp = ros::Time(filter_.getLastMeasurementTime());
-      message.header.frame_id = baseLinkFrameId_;
+      message.header.frame_id = baseLinkOutputFrameId_;
     }
 
     return filter_.getInitializedStatus();
@@ -705,6 +705,7 @@ namespace RobotLocalization
     nhLocal_.param("map_frame", mapFrameId_, std::string("map"));
     nhLocal_.param("odom_frame", odomFrameId_, std::string("odom"));
     nhLocal_.param("base_link_frame", baseLinkFrameId_, std::string("base_link"));
+    nhLocal_.param("base_link_frame_output", baseLinkOutputFrameId_, baseLinkFrameId_);
 
     /*
      * These parameters are designed to enforce compliance with REP-105:
@@ -735,9 +736,12 @@ namespace RobotLocalization
 
     ROS_FATAL_COND(mapFrameId_ == odomFrameId_ ||
                    odomFrameId_ == baseLinkFrameId_ ||
-                   mapFrameId_ == baseLinkFrameId_,
+                   mapFrameId_ == baseLinkFrameId_ ||
+                   odomFrameId_ == baseLinkOutputFrameId_ ||
+                   mapFrameId_ == baseLinkOutputFrameId_,
                    "Invalid frame configuration! The values for map_frame, odom_frame, "
-                   "and base_link_frame must be unique");
+                   "and base_link_frame must be unique. If using a base_link_frame_output values, it "
+                   "must not match the map_frame or odom_frame.");
 
     // Try to resolve tf_prefix
     std::string tfPrefix = "";
@@ -921,6 +925,7 @@ namespace RobotLocalization
              "\nmap_frame is " << mapFrameId_ <<
              "\nodom_frame is " << odomFrameId_ <<
              "\nbase_link_frame is " << baseLinkFrameId_ <<
+             "\base_link_frame_output is " << baseLinkOutputFrameId_ <<
              "\nworld_frame is " << worldFrameId_ <<
              "\ntransform_time_offset is " << tfTimeOffset_.toSec() <<
              "\ntransform_timeout is " << tfTimeout_.toSec() <<
@@ -1784,7 +1789,7 @@ namespace RobotLocalization
     // We may need to broadcast a different transform than
     // the one we've already calculated.
     tf2::Transform mapOdomTrans;
-    tf2::Transform odomBaseLinkTrans;
+    tf2::Transform baseLinkOdomTrans;
     geometry_msgs::TransformStamped mapOdomTransMsg;
     ros::Time curTime;
     ros::Time lastDiagTime = ros::Time::now();
@@ -1885,7 +1890,7 @@ namespace RobotLocalization
                      baseLinkFrameId_,
                      odomFrameId_,
                      ros::Time(filter_.getLastMeasurementTime()),
-                     odomBaseLinkTrans,
+                     baseLinkOdomTrans,
                      true))
               {
                 ROS_ERROR_STREAM_DELAYED_THROTTLE(1.0, "Unable to retrieve " << odomFrameId_ << "->" <<
@@ -1911,7 +1916,7 @@ namespace RobotLocalization
                * the inverse of that entire transform.
               */
 
-              mapOdomTrans.mult(worldBaseLinkTrans, odomBaseLinkTrans);
+              mapOdomTrans.mult(worldBaseLinkTrans, baseLinkOdomTrans);
 
               mapOdomTransMsg.transform = tf2::toMsg(mapOdomTrans);
               mapOdomTransMsg.header.stamp = filteredPosition.header.stamp + tfTimeOffset_;

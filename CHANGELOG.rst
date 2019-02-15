@@ -2,6 +2,21 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.4.7 (2019-02-15)
+------------------
+* Documentation fixes
+* Add broadcast_utm_transform_as_parent_frame
+* Enable build optimisations if no build type configured.
+* Meridian convergence adjustment added to navsat_transform.
+* Contributors: G.A. vd. Hoorn, Pavlo Kolomiiets, diasdm
+
+2.4.6 (2019-01-14)
+------------------
+* Renaming odom to base link trans
+* Fixing Euler body-to-world transformations
+* Enabling the user to override the output child_frame_id
+* Contributors: Tom Moore
+
 2.4.5 (2018-10-25)
 ------------------
 * Linting
