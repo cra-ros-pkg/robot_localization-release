@@ -2,6 +2,26 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.6.4 (2019-02-15)
+------------------
+* Meridian convergence adjustment added to navsat_transform.
+* Documentation changes
+* Add broadcast_utm_transform_as_parent_frame
+* Enable build optimisations if no build type configured.
+* Contributors: G.A. vd. Hoorn, Pavlo Kolomiiets, diasdm
+
+2.6.3 (2019-01-14)
+------------------
+* Rename odomBaseLinkTrans to baseLinkOdomTrans
+  Adhere to the naming convention <fromFrame><toFrame>Trans used for worldBaseLinkTrans and mapOdomTrans.
+* Add const& to catch values to prevent the error:  catching polymorphic type ‘class tf2::TransformException’ by value
+  And ZoneNumber by 0x3fU to prevent error: directive output may be truncated writing between 1 and 11 bytes into a region of size 4
+* Enabling the user to override the output child_frame_id
+* Fixing Euler body-to-world transformations
+* Whitespace
+* fixing no datum service in melodic
+* Contributors: Alexis schad, Matthew Jones, Tom Moore, thallerod
+
 2.6.2 (2018-10-25)
 ------------------
 * Fixing tests
