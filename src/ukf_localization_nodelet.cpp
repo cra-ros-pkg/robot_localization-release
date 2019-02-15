@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, 2016, Charles River Analytics, Inc.
+ * Copyright (c) 2017 Simon Gene Gottlieb
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,22 +30,40 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "robot_localization/navsat_transform.h"
+#include "robot_localization/ros_filter_types.h"
 
+#include <nodelet/nodelet.h>
+#include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
+#include <vector>
 
-int main(int argc, char **argv)
+namespace RobotLocalization
 {
-  ros::init(argc, argv, "navsat_transform_node");
 
-  ros::NodeHandle nh;
-  ros::NodeHandle nh_priv("~");
+class UkfNodelet : public nodelet::Nodelet
+{
+private:
+  std::auto_ptr<RosUkf> ukf;
 
+public:
+  virtual void onInit()
+  {
+    NODELET_DEBUG("Initializing nodelet...");
 
-  RobotLocalization::NavSatTransform trans(nh, nh_priv);
-  ros::spin();
+    ros::NodeHandle nh      = getNodeHandle();
+    ros::NodeHandle nh_priv = getPrivateNodeHandle();
 
-  return EXIT_SUCCESS;
-}
+    std::vector<double> args(3, 0);
 
+    nh_priv.param("alpha", args[0], 0.001);
+    nh_priv.param("kappa", args[1], 0.0);
+    nh_priv.param("beta",  args[2], 2.0);
 
+    ukf.reset(new RosUkf(nh, nh_priv, args));
+    ukf->initialize();
+  }
+};
+
+}  // namespace RobotLocalization
+
+PLUGINLIB_EXPORT_CLASS(RobotLocalization::UkfNodelet, nodelet::Nodelet);
