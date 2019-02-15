@@ -153,7 +153,7 @@ tracks:
     - git-bloom-generate -y rosrpm --prefix release/:{ros_distro} :{ros_distro} -i
       :{release_inc}
     devel_branch: melodic-devel
-    last_version: 2.6.2
+    last_version: 2.6.4
     name: robot_localization
     patches: null
     release_inc: '0'
