@@ -111,13 +111,17 @@ template<class T> class RosFilter
     //! The RosFilter constructor makes sure that anyone using
     //! this template is doing so with the correct object type
     //!
-    explicit RosFilter(std::vector<double> args = std::vector<double>());
+    explicit RosFilter(ros::NodeHandle nh, ros::NodeHandle nh_priv, std::vector<double> args = std::vector<double>());
 
     //! @brief Destructor
     //!
     //! Clears out the message filters and topic subscribers.
     //!
     ~RosFilter();
+
+    //! @brief Initialize filter
+    //
+    void initialize();
 
     //! @brief Resets the filter to its initial state
     //!
@@ -236,10 +240,6 @@ template<class T> class RosFilter
                       const CallbackData &callbackData,
                       const std::string &targetFrame,
                       const bool imuData);
-
-    //! @brief Main run method
-    //!
-    void run();
 
     //! @brief Callback method for manually setting/resetting the internal pose estimate
     //! @param[in] msg - The ROS stamped pose with covariance message to take in
@@ -407,9 +407,94 @@ template<class T> class RosFilter
                       Eigen::VectorXd &measurement,
                       Eigen::MatrixXd &measurementCovariance);
 
-    //! @brief tf frame name for the robot's body frame
+
+    //! @brief callback function which is called for periodic updates
     //!
-    //! All velocity and linear acceleration data is transformed into this frame before being fused
+    void periodicUpdate(const ros::TimerEvent& event);
+
+    //! @brief Start the Filter disabled at startup
+    //!
+    //! If this is true, the filter reads parameters and prepares publishers and subscribes
+    //! but does not integrate new messages into the state vector.
+    //! The filter can be enabled later using a service.
+    bool disabledAtStartup_;
+
+    //! @brief Whether the filter is enabled or not. See disabledAtStartup_.
+    bool enabled_;
+
+    //! @brief By default, the filter predicts and corrects up to the time of the latest measurement. If this is set
+    //! to true, the filter does the same, but then also predicts up to the current time step.
+    //!
+    bool predictToCurrentTime_;
+
+    //! @brief Whether or not we print diagnostic messages to the /diagnostics topic
+    //!
+    bool printDiagnostics_;
+
+    //! @brief Whether we publish the acceleration
+    //!
+    bool publishAcceleration_;
+
+    //! @brief Whether we publish the transform from the world_frame to the base_link_frame
+    //!
+    bool publishTransform_;
+
+    //! @brief Whether to reset the filters when backwards jump in time is detected
+    //!
+    //! This is usually the case when logs are being used and a jump in the logi
+    //! is done or if a log files restarts from the beginning.
+    //!
+    bool resetOnTimeJump_;
+
+    //! @brief Whether or not we use smoothing
+    //!
+    bool smoothLaggedData_;
+
+    //! @brief Whether the filter should process new measurements or not.
+    bool toggledOn_;
+
+    //! @brief Whether or not we're in 2D mode
+    //!
+    //! If this is true, the filter binds all 3D variables (Z,
+    //! roll, pitch, and their respective velocities) to 0 for
+    //! every measurement.
+    //!
+    bool twoDMode_;
+
+    //! @brief Whether or not we use a control term
+    //!
+    bool useControl_;
+
+    //! @brief The max (worst) dynamic diagnostic level.
+    //!
+    int dynamicDiagErrorLevel_;
+
+    //! @brief The max (worst) static diagnostic level.
+    //!
+    int staticDiagErrorLevel_;
+
+    //! @brief The frequency of the run loop
+    //!
+    double frequency_;
+
+    //! @brief What is the acceleration in Z due to gravity (m/s^2)? Default is +9.80665.
+    //!
+    double gravitationalAcc_;
+
+    //! @brief The depth of the history we track for smoothing/delayed measurement processing
+    //!
+    //! This is the guaranteed minimum buffer size for which previous states and measurements are kept.
+    //!
+    double historyLength_;
+
+    //! @brief minimal frequency
+    //!
+    double minFrequency_;
+
+    //! @brief maximal frequency
+    double maxFrequency_;
+
+    //! @brief tf frame name for the robot's body frame
     //!
     std::string baseLinkFrameId_;
 
@@ -420,16 +505,29 @@ template<class T> class RosFilter
     //!
     std::string baseLinkOutputFrameId_;
 
-    //! @brief Subscribes to the control input topic
+    //! @brief tf frame name for the robot's map (world-fixed) frame
     //!
-    ros::Subscriber controlSub_;
+    std::string mapFrameId_;
 
-    //! @brief This object accumulates static diagnostics, e.g., diagnostics relating
-    //! to the configuration parameters.
+    //! @brief tf frame name for the robot's odometry (world-fixed) frame
     //!
-    //! The values are treated as static and always reported (i.e., this object is never cleared)
+    std::string odomFrameId_;
+
+    //! @brief tf frame name that is the parent frame of the transform that this node will calculate and broadcast.
     //!
-    std::map<std::string, std::string> staticDiagnostics_;
+    std::string worldFrameId_;
+
+    //! @brief Used for outputting debug messages
+    //!
+    std::ofstream debugStream_;
+
+    //! @brief Contains the state vector variable names in string format
+    //!
+    std::vector<std::string> stateVariableNames_;
+
+    //! @brief Vector to hold our subscribers until they go out of scope
+    //!
+    std::vector<ros::Subscriber> topicSubs_;
 
     //! @brief This object accumulates dynamic diagnostics, e.g., diagnostics relating
     //! to sensor data.
@@ -437,55 +535,6 @@ template<class T> class RosFilter
     //! The values are considered transient and are cleared at every iteration.
     //!
     std::map<std::string, std::string> dynamicDiagnostics_;
-
-    //! @brief Used for outputting debug messages
-    //!
-    std::ofstream debugStream_;
-
-    //! @brief The max (worst) dynamic diagnostic level.
-    //!
-    int dynamicDiagErrorLevel_;
-
-    //! @brief Used for updating the diagnostics
-    //!
-    diagnostic_updater::Updater diagnosticUpdater_;
-
-    //! @brief Our filter (EKF, UKF, etc.)
-    //!
-    T filter_;
-
-    //! @brief The frequency of the run loop
-    //!
-    double frequency_;
-
-    //! @brief The depth of the history we track for smoothing/delayed measurement processing
-    //!
-    //! This is the guaranteed minimum buffer size for which previous states and measurements are kept.
-    //!
-    double historyLength_;
-
-    //! @brief Whether to reset the filters when backwards jump in time is detected
-    //!
-    //! This is usually the case when logs are being used and a jump in the logi
-    //! is done or if a log files restarts from the beginning.
-    //!
-    bool resetOnTimeJump_;
-
-    //! @brief The most recent control input
-    //!
-    Eigen::VectorXd latestControl_;
-
-    //! @brief The time of the most recent control input
-    //!
-    ros::Time latestControlTime_;
-
-    //! @brief Parameter that specifies the how long we wait for a transform to become available.
-    //!
-    ros::Duration tfTimeout_;
-
-    //! @brief Vector to hold our subscribers until they go out of scope
-    //!
-    std::vector<ros::Subscriber> topicSubs_;
 
     //! @brief Stores the first measurement from each topic for relative measurements
     //!
@@ -509,36 +558,9 @@ template<class T> class RosFilter
     //!
     std::map<std::string, ros::Time> lastMessageTimes_;
 
-    //! @brief Store the last time set pose message was received
+    //! @brief We also need the previous covariance matrix for differential data
     //!
-    //! If we receive a setPose message to reset the filter, we can get in
-    //! strange situations wherein we process the pose reset, but then even
-    //! after another spin cycle or two, we can get a new message with a time
-    //! stamp that is *older* than the setPose message's time stamp. This means
-    //! we have to check the message's time stamp against the lastSetPoseTime_.
-    ros::Time lastSetPoseTime_;
-
-    //! @brief tf frame name for the robot's map (world-fixed) frame
-    //!
-    std::string mapFrameId_;
-
-    //! @brief We process measurements by queueing them up in
-    //! callbacks and processing them all at once within each
-    //! iteration
-    //!
-    MeasurementQueue measurementQueue_;
-
-    //! @brief Node handle
-    //!
-    ros::NodeHandle nh_;
-
-    //! @brief Local node handle (for params)
-    //!
-    ros::NodeHandle nhLocal_;
-
-    //! @brief tf frame name for the robot's odometry (world-fixed) frame
-    //!
-    std::string odomFrameId_;
+    std::map<std::string, Eigen::MatrixXd> previousMeasurementCovariances_;
 
     //! @brief Stores the last measurement from a given topic for differential integration
     //!
@@ -550,94 +572,20 @@ template<class T> class RosFilter
     //!
     std::map<std::string, tf2::Transform> previousMeasurements_;
 
-    //! @brief We also need the previous covariance matrix for differential data
-    //!
-    std::map<std::string, Eigen::MatrixXd> previousMeasurementCovariances_;
-
-    //! @brief By default, the filter predicts and corrects up to the time of the latest measurement. If this is set
-    //! to true, the filter does the same, but then also predicts up to the current time step.
-    //!
-    bool predictToCurrentTime_;
-
-    //! @brief Whether or not we print diagnostic messages to the /diagnostics topic
-    //!
-    bool printDiagnostics_;
-
     //! @brief If including acceleration for each IMU input, whether or not we remove acceleration due to gravity
     //!
     std::map<std::string, bool> removeGravitationalAcc_;
 
-    //! @brief What is the acceleration in Z due to gravity (m/s^2)? Default is +9.80665.
+    //! @brief This object accumulates static diagnostics, e.g., diagnostics relating
+    //! to the configuration parameters.
     //!
-    double gravitationalAcc_;
-
-    //! @brief Subscribes to the set_pose topic (usually published from rviz). Message
-    //! type is geometry_msgs/PoseWithCovarianceStamped.
+    //! The values are treated as static and always reported (i.e., this object is never cleared)
     //!
-    ros::Subscriber setPoseSub_;
+    std::map<std::string, std::string> staticDiagnostics_;
 
-    //! @brief Service that allows another node to change the current state and recieve a confirmation. Uses
-    //! a custom SetPose service.
+    //! @brief The most recent control input
     //!
-    ros::ServiceServer setPoseSrv_;
-
-    //! @brief Whether or not we use smoothing
-    //!
-    bool smoothLaggedData_;
-
-    //! @brief Service that allows another node to enable the filter. Uses a standard Empty service.
-    //!
-    ros::ServiceServer enableFilterSrv_;
-
-    //! @brief Service that allows another node to toggle on/off filter processing while still publishing.
-    //! Uses a robot_localization ToggleFilterProcessing service.
-    //!
-    ros::ServiceServer toggleFilterProcessingSrv_;
-
-    //! @brief Contains the state vector variable names in string format
-    //!
-    std::vector<std::string> stateVariableNames_;
-
-    //! @brief The max (worst) static diagnostic level.
-    //!
-    int staticDiagErrorLevel_;
-
-    //! @brief Transform buffer for managing coordinate transforms
-    //!
-    tf2_ros::Buffer tfBuffer_;
-
-    //! @brief Transform listener for receiving transforms
-    //!
-    tf2_ros::TransformListener tfListener_;
-
-    //! @brief For future (or past) dating the world_frame->base_link_frame transform
-    //!
-    ros::Duration tfTimeOffset_;
-
-    //! @brief Whether or not we're in 2D mode
-    //!
-    //! If this is true, the filter binds all 3D variables (Z,
-    //! roll, pitch, and their respective velocities) to 0 for
-    //! every measurement.
-    //!
-    bool twoDMode_;
-
-    //! @brief Whether or not we use a control term
-    //!
-    bool useControl_;
-
-    //! @brief Start the Filter disabled at startup
-    //!
-    //! If this is true, the filter reads parameters and prepares publishers and subscribes
-    //! but does not integrate new messages into the state vector.
-    //! The filter can be enabled later using a service.
-    bool disabledAtStartup_;
-
-    //! @brief Whether the filter is enabled or not. See disabledAtStartup_.
-    bool enabled_;
-
-    //! $brief Whether the filter should process new measurements or not.
-    bool toggledOn_;
+    Eigen::VectorXd latestControl_;
 
     //! @brief Message that contains our latest transform (i.e., state)
     //!
@@ -647,17 +595,39 @@ template<class T> class RosFilter
     //!
     geometry_msgs::TransformStamped worldBaseLinkTransMsg_;
 
-    //! @brief tf frame name that is the parent frame of the transform that this node will calculate and broadcast.
+    //! @brief last call of periodicUpdate
     //!
-    std::string worldFrameId_;
+    ros::Time lastDiagTime_;
 
-    //! @brief Whether we publish the transform from the world_frame to the base_link_frame
+    //! @brief Store the last time set pose message was received
     //!
-    bool publishTransform_;
+    //! If we receive a setPose message to reset the filter, we can get in
+    //! strange situations wherein we process the pose reset, but then even
+    //! after another spin cycle or two, we can get a new message with a time
+    //! stamp that is *older* than the setPose message's time stamp. This means
+    //! we have to check the message's time stamp against the lastSetPoseTime_.
+    ros::Time lastSetPoseTime_;
 
-    //! @brief Whether we publish the acceleration
+    //! @brief The time of the most recent control input
     //!
-    bool publishAcceleration_;
+    ros::Time latestControlTime_;
+
+    //! @brief For future (or past) dating the world_frame->base_link_frame transform
+    //!
+    ros::Duration tfTimeOffset_;
+
+    //! @brief Parameter that specifies the how long we wait for a transform to become available.
+    //!
+    ros::Duration tfTimeout_;
+
+    //! @brief Service that allows another node to toggle on/off filter processing while still publishing.
+    //! Uses a robot_localization ToggleFilterProcessing service.
+    //!
+    ros::ServiceServer toggleFilterProcessingSrv_;
+
+    //! @brief timer calling periodicUpdate
+    //!
+    ros::Timer periodicUpdateTimer_;
 
     //! @brief An implicitly time ordered queue of past filter states used for smoothing.
     //
@@ -670,6 +640,70 @@ template<class T> class RosFilter
     // front() refers to the measurement with the earliest timestamp.
     // back() refers to the measurement with the latest timestamp.
     MeasurementHistoryDeque measurementHistory_;
+
+    //! @brief We process measurements by queueing them up in
+    //! callbacks and processing them all at once within each
+    //! iteration
+    //!
+    MeasurementQueue measurementQueue_;
+
+    //! @brief Our filter (EKF, UKF, etc.)
+    //!
+    T filter_;
+
+    //! @brief Node handle
+    //!
+    ros::NodeHandle nh_;
+
+    //! @brief Local node handle (for params)
+    //!
+    ros::NodeHandle nhLocal_;
+
+    //! @brief optional acceleration publisher
+    //!
+    ros::Publisher accelPub_;
+
+    //! @brief position publisher
+    //!
+    ros::Publisher positionPub_;
+
+    //! @brief Subscribes to the control input topic
+    //!
+    ros::Subscriber controlSub_;
+
+    //! @brief Subscribes to the set_pose topic (usually published from rviz). Message
+    //! type is geometry_msgs/PoseWithCovarianceStamped.
+    //!
+    ros::Subscriber setPoseSub_;
+
+    //! @brief Service that allows another node to enable the filter. Uses a standard Empty service.
+    //!
+    ros::ServiceServer enableFilterSrv_;
+
+    //! @brief Service that allows another node to change the current state and recieve a confirmation. Uses
+    //! a custom SetPose service.
+    //!
+    ros::ServiceServer setPoseSrv_;
+
+    //! @brief Used for updating the diagnostics
+    //!
+    diagnostic_updater::Updater diagnosticUpdater_;
+
+    //! @brief Transform buffer for managing coordinate transforms
+    //!
+    tf2_ros::Buffer tfBuffer_;
+
+    //! @brief Transform listener for receiving transforms
+    //!
+    tf2_ros::TransformListener tfListener_;
+
+    //! @brief broadcaster of worldTransform tfs
+    //!
+    tf2_ros::TransformBroadcaster worldTransformBroadcaster_;
+
+    //! @brief optional signaling diagnostic frequency
+    //!
+    std::unique_ptr<diagnostic_updater::HeaderlessTopicDiagnostic> freqDiag_;
 };
 
 }  // namespace RobotLocalization
