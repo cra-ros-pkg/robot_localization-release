@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, 2016 Charles River Analytics, Inc.
+ * Copyright (c) 2014, 2015, 2016, Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,20 +29,23 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include <rclcpp/rclcpp.hpp>
-#include <robot_localization/navsat_transform.hpp>
 
-#include <memory>
+#include "robot_localization/navsat_transform.h"
 
-int main(int argc, char ** argv)
+#include <ros/ros.h>
+
+int main(int argc, char **argv)
 {
-  rclcpp::init(argc, argv);
+  ros::init(argc, argv, "navsat_transform_node");
 
-  const rclcpp::NodeOptions options;
-  auto navsat_transform_node = std::make_shared<robot_localization::NavSatTransform>(options);
+  ros::NodeHandle nh;
+  ros::NodeHandle nh_priv("~");
 
-  rclcpp::spin(navsat_transform_node->get_node_base_interface());
 
-  rclcpp::shutdown();
-  return 0;
+  RobotLocalization::NavSatTransform trans(nh, nh_priv);
+  ros::spin();
+
+  return EXIT_SUCCESS;
 }
+
+
