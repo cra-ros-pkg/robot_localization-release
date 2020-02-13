@@ -46,7 +46,10 @@
 namespace RobotLocalization
 {
   template<typename T>
-  RosFilter<T>::RosFilter(ros::NodeHandle nh, ros::NodeHandle nh_priv, std::vector<double> args) :
+  RosFilter<T>::RosFilter(ros::NodeHandle nh,
+                          ros::NodeHandle nh_priv,
+                          std::string node_name,
+                          std::vector<double> args) :
       disabledAtStartup_(false),
       enabled_(false),
       predictToCurrentTime_(false),
@@ -77,6 +80,7 @@ namespace RobotLocalization
       filter_(args),
       nh_(nh),
       nhLocal_(nh_priv),
+      diagnosticUpdater_(nh, nh_priv, node_name),
       tfListener_(tfBuffer_)
   {
     stateVariableNames_.push_back("X");
@@ -97,6 +101,11 @@ namespace RobotLocalization
 
     diagnosticUpdater_.setHardwareID("none");
   }
+
+  template<typename T>
+  RosFilter<T>::RosFilter(ros::NodeHandle nh, ros::NodeHandle nh_priv, std::vector<double> args) :
+      RosFilter<T>::RosFilter(nh, nh_priv, ros::this_node::getName(), args)
+  {}
 
   template<typename T>
   RosFilter<T>::~RosFilter()
@@ -1358,7 +1367,31 @@ namespace RobotLocalization
         // update configuration (as this contains pose information)
         std::vector<int> updateVec = loadUpdateConfig(imuTopicName);
 
+        // sanity checks for update config settings
+        std::vector<int> positionUpdateVec(updateVec.begin() + POSITION_OFFSET,
+                                           updateVec.begin() + POSITION_OFFSET + POSITION_SIZE);
+        int positionUpdateSum = std::accumulate(positionUpdateVec.begin(), positionUpdateVec.end(), 0);
+        if (positionUpdateSum > 0)
+        {
+          ROS_WARN_STREAM("Warning: Some position entries in parameter " << imuTopicName << "_config are listed true, "
+                          "but sensor_msgs/Imu contains no information about position");
+        }
+        std::vector<int> linearVelocityUpdateVec(updateVec.begin() + POSITION_V_OFFSET,
+                                                 updateVec.begin() + POSITION_V_OFFSET + LINEAR_VELOCITY_SIZE);
+        int linearVelocityUpdateSum = std::accumulate(linearVelocityUpdateVec.begin(),
+                                                      linearVelocityUpdateVec.end(),
+                                                      0);
+        if (linearVelocityUpdateSum > 0)
+        {
+          ROS_WARN_STREAM("Warning: Some linear velocity entries in parameter " << imuTopicName << "_config are listed "
+                          "true, but an sensor_msgs/Imu contains no information about linear velocities");
+        }
+
         std::vector<int> poseUpdateVec = updateVec;
+        // IMU message contains no information about position, filter everything except orientation
+        std::fill(poseUpdateVec.begin() + POSITION_OFFSET,
+                  poseUpdateVec.begin() + POSITION_OFFSET + POSITION_SIZE,
+                  0);
         std::fill(poseUpdateVec.begin() + POSITION_V_OFFSET,
                   poseUpdateVec.begin() + POSITION_V_OFFSET + TWIST_SIZE,
                   0);
@@ -1367,8 +1400,12 @@ namespace RobotLocalization
                   0);
 
         std::vector<int> twistUpdateVec = updateVec;
+        // IMU message contains no information about linear speeds, filter everything except angular velocity
         std::fill(twistUpdateVec.begin() + POSITION_OFFSET,
                   twistUpdateVec.begin() + POSITION_OFFSET + POSE_SIZE,
+                  0);
+        std::fill(twistUpdateVec.begin() + POSITION_V_OFFSET,
+                  twistUpdateVec.begin() + POSITION_V_OFFSET + LINEAR_VELOCITY_SIZE,
                   0);
         std::fill(twistUpdateVec.begin() + POSITION_A_OFFSET,
                   twistUpdateVec.begin() + POSITION_A_OFFSET + ACCELERATION_SIZE,
