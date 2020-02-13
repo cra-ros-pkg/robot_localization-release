@@ -57,7 +57,6 @@ namespace RobotLocalization
     use_odometry_yaw_(false),
     zero_altitude_(false),
     magnetic_declination_(0.0),
-    utm_odom_tf_yaw_(0.0),
     yaw_offset_(0.0),
     base_link_frame_id_("base_link"),
     gps_frame_id_(""),
@@ -691,7 +690,7 @@ namespace RobotLocalization
 
       filtered_gps.position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_KNOWN;
       filtered_gps.status.status = sensor_msgs::NavSatStatus::STATUS_GBAS_FIX;
-      filtered_gps.header.frame_id = "gps";
+      filtered_gps.header.frame_id = base_link_frame_id_;
       filtered_gps.header.stamp = odom_update_time_;
 
       // Mark this GPS as used
@@ -777,7 +776,7 @@ namespace RobotLocalization
     tf2::fromMsg(msg->pose.pose, transform_world_pose_);
     has_transform_odom_ = true;
 
-    ROS_INFO_STREAM("Initial odometry pose is " << transform_world_pose_);
+    ROS_INFO_STREAM_ONCE("Initial odometry pose is " << transform_world_pose_);
 
     // Users can optionally use the (potentially fused) heading from
     // the odometry source, which may have multiple fused sources of
