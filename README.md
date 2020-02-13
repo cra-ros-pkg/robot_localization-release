@@ -1,3 +1,26 @@
+## robot_localization (dashing) - 3.0.1-1
+
+The packages in the `robot_localization` repository were released into the `dashing` distro by running `/usr/local/bin/bloom-release --rosdistro dashing --track dashing robot_localization` on `Thu, 13 Feb 2020 23:26:34 -0000`
+
+The `robot_localization` package was released.
+
+Version of package(s) in repository `robot_localization`:
+
+- upstream repository: https://github.com/cra-ros-pkg/robot_localization.git
+- release repository: unknown
+- rosdistro version: `null`
+- old version: `null`
+- new version: `3.0.1-1`
+
+Versions of tools used:
+
+- bloom version: `0.9.0`
+- catkin_pkg version: `0.4.15`
+- rosdep version: `0.18.0`
+- rosdistro version: `0.8.0`
+- vcstools version: `0.1.42`
+
+
 ## robot_localization (melodic) - 2.6.5-1
 
 The packages in the `robot_localization` repository were released into the `melodic` distro by running `/usr/bin/bloom-release -r melodic -t melodic robot_localization` on `Thu, 08 Aug 2019 10:45:09 -0000`
