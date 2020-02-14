@@ -1,4 +1,4 @@
-time time_stamp
+builtin_interfaces/Time time_stamp
 string frame_id
 ---
 # State vector: x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az

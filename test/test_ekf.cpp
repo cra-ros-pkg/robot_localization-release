@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, 2016, Charles River Analytics, Inc.
+ * Copyright (c) 2014, 2015, 2016 Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,71 +30,63 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "robot_localization/ros_filter_types.h"
 
 #include <gtest/gtest.h>
-
+#include <robot_localization/filter_base.hpp>
 #include <limits>
 #include <vector>
+#include <memory>
 
-using RobotLocalization::Ekf;
-using RobotLocalization::RosEkf;
-using RobotLocalization::STATE_SIZE;
+#include "robot_localization/ekf.hpp"
+#include "robot_localization/ros_filter.hpp"
+#include "robot_localization/ros_filter_types.hpp"
 
-class RosEkfPassThrough : public RosEkf
-{
-  public:
-    RosEkfPassThrough() : RosEkf(ros::NodeHandle(), ros::NodeHandle("~"))
-    {
-    }
+using robot_localization::Ekf;
+using robot_localization::RosEkf;
+using robot_localization::STATE_SIZE;
 
-    Ekf &getFilter()
-    {
-      return filter_;
-    }
-};
+TEST(EkfTest, Measurements) {
+  // node handle is created as per ros2
+  rclcpp::NodeOptions options;
+  options.arguments({"ekf_filter_node"});
+  std::shared_ptr<robot_localization::RosEkf> filter =
+    std::make_shared<robot_localization::RosEkf>(options);
+  filter->initialize();
 
-TEST(EkfTest, Measurements)
-{
-  RosEkfPassThrough ekf;
-
+  // create the instance of the class and pass parameters
   Eigen::MatrixXd initialCovar(15, 15);
+
   initialCovar.setIdentity();
   initialCovar *= 0.5;
-  ekf.getFilter().setEstimateErrorCovariance(initialCovar);
+
+  filter->getFilter().setEstimateErrorCovariance(initialCovar);
 
   Eigen::VectorXd measurement(STATE_SIZE);
   measurement.setIdentity();
-  for (size_t i = 0; i < STATE_SIZE; ++i)
-  {
+
+  for (size_t i = 0; i < STATE_SIZE; ++i) {
     measurement[i] = i * 0.01 * STATE_SIZE;
   }
-
   Eigen::MatrixXd measurementCovariance(STATE_SIZE, STATE_SIZE);
   measurementCovariance.setIdentity();
-  for (size_t i = 0; i < STATE_SIZE; ++i)
-  {
+  for (size_t i = 0; i < STATE_SIZE; ++i) {
     measurementCovariance(i, i) = 1e-9;
   }
-
-  std::vector<int> updateVector(STATE_SIZE, true);
+  std::vector<bool> updateVector(STATE_SIZE, true);
 
   // Ensure that measurements are being placed in the queue correctly
-  ros::Time time;
-  time.fromSec(1000);
-  ekf.enqueueMeasurement("odom0",
-                         measurement,
-                         measurementCovariance,
-                         updateVector,
-                         std::numeric_limits<double>::max(),
-                         time);
+  rclcpp::Time time1(1000);
+  filter->robot_localization::RosEkf::enqueueMeasurement(
+    "odom0", measurement, measurementCovariance, updateVector,
+    std::numeric_limits<double>::max(), time1);
 
-  ekf.integrateMeasurements(ros::Time(1001));
+  filter->robot_localization::RosEkf::integrateMeasurements(rclcpp::Time(1001));
 
-  EXPECT_EQ(ekf.getFilter().getState(), measurement);
-  EXPECT_EQ(ekf.getFilter().getEstimateErrorCovariance(), measurementCovariance);
+  EXPECT_EQ(filter->getFilter().getState(), measurement);
+  EXPECT_EQ(filter->getFilter().getEstimateErrorCovariance(),
+    measurementCovariance);
 
-  ekf.getFilter().setEstimateErrorCovariance(initialCovar);
+  filter->getFilter().setEstimateErrorCovariance(initialCovar);
 
   // Now fuse another measurement and check the output.
   // We know what the filter's state should be when
@@ -104,32 +96,30 @@ TEST(EkfTest, Measurements)
 
   measurement2 *= 2.0;
 
-  for (size_t i = 0; i < STATE_SIZE; ++i)
-  {
+  for (size_t i = 0; i < STATE_SIZE; ++i) {
     measurementCovariance(i, i) = 1e-9;
   }
 
-  time.fromSec(1002);
-  ekf.enqueueMeasurement("odom0",
-                         measurement2,
-                         measurementCovariance,
-                         updateVector,
-                         std::numeric_limits<double>::max(),
-                         time);
+  rclcpp::Time time2(1002);
 
-  ekf.integrateMeasurements(ros::Time(1003));
+  filter->robot_localization::RosEkf::enqueueMeasurement(
+    "odom0", measurement2, measurementCovariance, updateVector,
+    std::numeric_limits<double>::max(), time2);
 
-  measurement = measurement2.eval() - ekf.getFilter().getState();
-  for (size_t i = 0; i < STATE_SIZE; ++i)
-  {
+  filter->robot_localization::RosEkf::integrateMeasurements(rclcpp::Time(1003));
+
+  measurement = measurement2.eval() - filter->getFilter().getState();
+  for (size_t i = 0; i < STATE_SIZE; ++i) {
     EXPECT_LT(::fabs(measurement[i]), 0.001);
   }
 }
 
-int main(int argc, char **argv)
+int main(int argc, char ** argv)
 {
-  ros::init(argc, argv, "ekf");
+  rclcpp::init(argc, argv);
+  ::testing::InitGoogleTest(&argc, argv);
+  int ret = RUN_ALL_TESTS();
+  rclcpp::shutdown();
 
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+  return ret;
 }

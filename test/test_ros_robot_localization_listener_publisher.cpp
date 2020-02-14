@@ -30,36 +30,40 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <geometry_msgs/AccelWithCovarianceStamped.h>
-#include <nav_msgs/Odometry.h>
-#include <string>
-
-#include <ros/ros.h>
+#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#include <rclcpp/rclcpp.hpp>
 #include <tf2/utils.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 
-int main(int argc, char **argv)
+#include <string>
+#include <memory>
+
+int main(int argc, char ** argv)
 {
-  ros::init(argc, argv, "test_robot_localization_listener_publisher");
+  rclcpp::init(argc, argv);
+  std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared(
+    "test_robot_localization_listener_publisher");
 
-  ros::NodeHandle nh;
-  ros::Publisher odom_pub = nh.advertise<nav_msgs::Odometry>("odometry/filtered", 1);
-  ros::Publisher accel_pub = nh.advertise<geometry_msgs::AccelWithCovarianceStamped>("accel/filtered", 1);
-  tf2_ros::StaticTransformBroadcaster transform_broadcaster;
+  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub =
+    node->create_publisher<nav_msgs::msg::Odometry>("odometry/filtered", 1);
+  rclcpp::Publisher<geometry_msgs::msg::AccelWithCovarianceStamped>::SharedPtr accel_pub =
+    node->create_publisher<geometry_msgs::msg::AccelWithCovarianceStamped>("accel/filtered", 1);
 
-  ros::Time end_time = ros::Time::now() + ros::Duration(10);
-  while (ros::ok() && ros::Time::now() < end_time)
-  {
-    ros::Time time1(1000);
+  tf2_ros::StaticTransformBroadcaster transform_broadcaster(node);
+
+  rclcpp::Time end_time = node->now() + rclcpp::Duration(10, 0);
+  while (rclcpp::ok() && node->now() < end_time) {
+    rclcpp::Time time1(1000, 0);
     double x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az;
     x = y = z = roll = pitch = yaw = vy = vz = vroll = vpitch = vyaw = ax = ay = az = 0.0;
     vx = 1.0;
-    vroll = M_PI/4.0;
+    vroll = M_PI / 4.0;
 
     tf2::Quaternion q;
     q.setRPY(0, 0, 0);
 
-    nav_msgs::Odometry odom_msg;
+    nav_msgs::msg::Odometry odom_msg;
     odom_msg.header.stamp = time1;
     odom_msg.header.frame_id = "map";
     odom_msg.child_frame_id = "base_link";
@@ -78,7 +82,7 @@ int main(int argc, char **argv)
     odom_msg.twist.twist.angular.y = vpitch;
     odom_msg.twist.twist.angular.z = vyaw;
 
-    geometry_msgs::AccelWithCovarianceStamped accel_msg;
+    geometry_msgs::msg::AccelWithCovarianceStamped accel_msg;
     accel_msg.header.stamp = time1;
     accel_msg.header.frame_id = "base_link";
     accel_msg.accel.accel.linear.x = ax;
@@ -88,12 +92,12 @@ int main(int argc, char **argv)
     accel_msg.accel.accel.angular.y = 0;
     accel_msg.accel.accel.angular.z = 0;
 
-    odom_pub.publish(odom_msg);
-    accel_pub.publish(accel_msg);
+    odom_pub->publish(odom_msg);
+    accel_pub->publish(accel_msg);
 
-    geometry_msgs::TransformStamped transformStamped;
+    geometry_msgs::msg::TransformStamped transformStamped;
 
-    transformStamped.header.stamp = ros::Time::now();
+    transformStamped.header.stamp = node->now();
     transformStamped.header.frame_id = "base_link";
     transformStamped.child_frame_id = "sensor";
     transformStamped.transform.translation.x = 0.0;
@@ -101,7 +105,7 @@ int main(int argc, char **argv)
     transformStamped.transform.translation.z = 0.0;
     {
       tf2::Quaternion q;
-      q.setRPY(0, 0, M_PI/2);
+      q.setRPY(0, 0, M_PI / 2);
       transformStamped.transform.rotation.x = q.x();
       transformStamped.transform.rotation.y = q.y();
       transformStamped.transform.rotation.z = q.z();
@@ -110,7 +114,7 @@ int main(int argc, char **argv)
       transform_broadcaster.sendTransform(transformStamped);
     }
 
-    ros::Duration(0.1).sleep();
+    rclcpp::Rate(10).sleep();
   }
 
   return 0;
