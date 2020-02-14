@@ -1,0 +1,12 @@
+Source: ros-dashing-robot-localization
+Section: misc
+Priority: optional
+Maintainer: Tom Moore <ayrton04@gmail.com>
+Build-Depends: debhelper (>= 9.0.0), libeigen3-dev, libyaml-cpp-dev, ros-dashing-ament-cmake, ros-dashing-ament-cmake-gtest, ros-dashing-ament-lint-auto, ros-dashing-ament-lint-common, ros-dashing-builtin-interfaces, ros-dashing-diagnostic-msgs, ros-dashing-diagnostic-updater, ros-dashing-geographic-msgs, ros-dashing-geometry-msgs, ros-dashing-launch-testing-ament-cmake, ros-dashing-nav-msgs, ros-dashing-rclcpp, ros-dashing-rmw-implementation, ros-dashing-rosidl-default-generators, ros-dashing-sensor-msgs, ros-dashing-std-msgs, ros-dashing-std-srvs, ros-dashing-tf2, ros-dashing-tf2-eigen, ros-dashing-tf2-geometry-msgs, ros-dashing-tf2-ros, ros-dashing-ros-workspace, ros-dashing-rmw-connext-cpp, ros-dashing-rmw-fastrtps-cpp, ros-dashing-rmw-implementation, ros-dashing-rmw-opensplice-cpp, ros-dashing-rosidl-typesupport-connext-c, ros-dashing-rosidl-typesupport-connext-cpp, ros-dashing-rosidl-typesupport-opensplice-c, ros-dashing-rosidl-typesupport-opensplice-cpp
+Homepage: http://ros.org/wiki/robot_localization
+Standards-Version: 3.9.2
+
+Package: ros-dashing-robot-localization
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libeigen3-dev, libyaml-cpp-dev, ros-dashing-diagnostic-msgs, ros-dashing-diagnostic-updater, ros-dashing-geographic-msgs, ros-dashing-geometry-msgs, ros-dashing-launch-ros, ros-dashing-nav-msgs, ros-dashing-rclcpp, ros-dashing-rmw-implementation, ros-dashing-rosidl-default-runtime, ros-dashing-sensor-msgs, ros-dashing-std-msgs, ros-dashing-std-srvs, ros-dashing-tf2, ros-dashing-tf2-eigen, ros-dashing-tf2-geometry-msgs, ros-dashing-tf2-ros, ros-dashing-ros-workspace
+Description: Provides nonlinear state estimation through sensor fusion of an abritrary number of sensors.
