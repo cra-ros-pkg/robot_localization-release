@@ -30,108 +30,103 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <rclcpp/rclcpp.hpp>
-#include <gtest/gtest.h>
-#include <tf2_ros/static_transform_broadcaster.h>
+#include "robot_localization/ros_robot_localization_listener.h"
+#include "robot_localization/filter_common.h"
 
 #include <string>
-#include <memory>
 
-#include "robot_localization/ros_robot_localization_listener.hpp"
-#include "robot_localization/filter_common.hpp"
+#include <ros/ros.h>
+#include <tf2_ros/static_transform_broadcaster.h>
 
-std::shared_ptr<rclcpp::Node> node;
-std::unique_ptr<robot_localization::RosRobotLocalizationListener> g_listener;
+#include <gtest/gtest.h>
+
+RobotLocalization::RosRobotLocalizationListener* g_listener;
 
 TEST(LocalizationListenerTest, testGetStateOfBaseLink)
 {
-  rclcpp::spin_some(node);
+  ros::spinOnce();
 
-  rclcpp::Time time2(1001, 0);
+  ros::Time time2(1001);
 
-  Eigen::VectorXd state(robot_localization::STATE_SIZE);
-  Eigen::MatrixXd covariance(robot_localization::STATE_SIZE, robot_localization::STATE_SIZE);
-
+  Eigen::VectorXd state(RobotLocalization::STATE_SIZE);
+  Eigen::MatrixXd covariance(RobotLocalization::STATE_SIZE, RobotLocalization::STATE_SIZE);
 
   std::string base_frame("base_link");
   g_listener->getState(time2, base_frame, state, covariance);
 
-  EXPECT_DOUBLE_EQ(1.0, state(robot_localization::StateMemberX));
-  EXPECT_DOUBLE_EQ(0.0, state(robot_localization::StateMemberY));
-  EXPECT_DOUBLE_EQ(0.0, state(robot_localization::StateMemberZ));
+  EXPECT_DOUBLE_EQ(1.0, state(RobotLocalization::StateMemberX));
+  EXPECT_DOUBLE_EQ(0.0, state(RobotLocalization::StateMemberY));
+  EXPECT_DOUBLE_EQ(0.0, state(RobotLocalization::StateMemberZ));
 
-  EXPECT_FLOAT_EQ(M_PI / 4, state(robot_localization::StateMemberRoll));
-  EXPECT_FLOAT_EQ(0.0, state(robot_localization::StateMemberPitch));
-  EXPECT_FLOAT_EQ(0.0, state(robot_localization::StateMemberYaw));
+  EXPECT_FLOAT_EQ(M_PI/4, state(RobotLocalization::StateMemberRoll));
+  EXPECT_FLOAT_EQ(0.0, state(RobotLocalization::StateMemberPitch));
+  EXPECT_FLOAT_EQ(0.0, state(RobotLocalization::StateMemberYaw));
 
-  EXPECT_DOUBLE_EQ(M_PI / 4.0, state(robot_localization::StateMemberVroll));
-  EXPECT_DOUBLE_EQ(0.0, state(robot_localization::StateMemberVpitch));
-  EXPECT_DOUBLE_EQ(0.0, state(robot_localization::StateMemberVyaw));
+  EXPECT_DOUBLE_EQ(M_PI/4.0, state(RobotLocalization::StateMemberVroll));
+  EXPECT_DOUBLE_EQ(0.0, state(RobotLocalization::StateMemberVpitch));
+  EXPECT_DOUBLE_EQ(0.0, state(RobotLocalization::StateMemberVyaw));
 }
 
 TEST(LocalizationListenerTest, GetStateOfRelatedFrame)
 {
-  rclcpp::spin_some(node);
+  ros::spinOnce();
 
-  Eigen::VectorXd state(robot_localization::STATE_SIZE);
-  Eigen::MatrixXd covariance(robot_localization::STATE_SIZE, robot_localization::STATE_SIZE);
+  Eigen::VectorXd state(RobotLocalization::STATE_SIZE);
+  Eigen::MatrixXd covariance(RobotLocalization::STATE_SIZE, RobotLocalization::STATE_SIZE);
 
-  rclcpp::Time time1(1000, 0);
-  rclcpp::Time time2(1001, 0);
+  ros::Time time1(1000);
+  ros::Time time2(1001);
 
   std::string sensor_frame("sensor");
 
   EXPECT_TRUE(g_listener->getState(time1, sensor_frame, state, covariance) );
 
-  EXPECT_FLOAT_EQ(0.0, state(robot_localization::StateMemberX));
-  EXPECT_FLOAT_EQ(1.0, state(robot_localization::StateMemberY));
-  EXPECT_FLOAT_EQ(0.0, state(robot_localization::StateMemberZ));
+  EXPECT_FLOAT_EQ(0.0, state(RobotLocalization::StateMemberX));
+  EXPECT_FLOAT_EQ(1.0, state(RobotLocalization::StateMemberY));
+  EXPECT_FLOAT_EQ(0.0, state(RobotLocalization::StateMemberZ));
 
-  EXPECT_FLOAT_EQ(0.0, state(robot_localization::StateMemberRoll));
-  EXPECT_FLOAT_EQ(0.0, state(robot_localization::StateMemberPitch));
-  EXPECT_FLOAT_EQ(M_PI / 2, state(robot_localization::StateMemberYaw));
+  EXPECT_FLOAT_EQ(0.0, state(RobotLocalization::StateMemberRoll));
+  EXPECT_FLOAT_EQ(0.0, state(RobotLocalization::StateMemberPitch));
+  EXPECT_FLOAT_EQ(M_PI/2, state(RobotLocalization::StateMemberYaw));
 
-  EXPECT_TRUE(1e-12 > state(robot_localization::StateMemberVx));
-  EXPECT_FLOAT_EQ(-1.0, state(robot_localization::StateMemberVy));
-  EXPECT_FLOAT_EQ(M_PI / 4.0, state(robot_localization::StateMemberVz));
+  EXPECT_TRUE(1e-12 > state(RobotLocalization::StateMemberVx));
+  EXPECT_FLOAT_EQ(-1.0, state(RobotLocalization::StateMemberVy));
+  EXPECT_FLOAT_EQ(M_PI/4.0, state(RobotLocalization::StateMemberVz));
 
-  EXPECT_TRUE(1e-12 > state(robot_localization::StateMemberVroll));
-  EXPECT_FLOAT_EQ(-M_PI / 4.0, state(robot_localization::StateMemberVpitch));
-  EXPECT_FLOAT_EQ(0.0, state(robot_localization::StateMemberVyaw));
+  EXPECT_TRUE(1e-12 > state(RobotLocalization::StateMemberVroll));
+  EXPECT_FLOAT_EQ(-M_PI/4.0, state(RobotLocalization::StateMemberVpitch));
+  EXPECT_FLOAT_EQ(0.0, state(RobotLocalization::StateMemberVyaw));
 
   EXPECT_TRUE(g_listener->getState(time2, sensor_frame, state, covariance));
 
-  EXPECT_FLOAT_EQ(1.0, state(robot_localization::StateMemberX));
-  EXPECT_FLOAT_EQ(sqrt(2) / 2.0, state(robot_localization::StateMemberY));
-  EXPECT_FLOAT_EQ(sqrt(2) / 2.0, state(robot_localization::StateMemberZ));
+  EXPECT_FLOAT_EQ(1.0, state(RobotLocalization::StateMemberX));
+  EXPECT_FLOAT_EQ(sqrt(2)/2.0, state(RobotLocalization::StateMemberY));
+  EXPECT_FLOAT_EQ(sqrt(2)/2.0, state(RobotLocalization::StateMemberZ));
 
-  EXPECT_TRUE(1e-12 > state(robot_localization::StateMemberRoll));
-  EXPECT_TRUE(1e-12 > fabs(-M_PI / 4.0 - state(robot_localization::StateMemberPitch)));
-  EXPECT_FLOAT_EQ(M_PI / 2, state(robot_localization::StateMemberYaw));
+  EXPECT_TRUE(1e-12 > state(RobotLocalization::StateMemberRoll));
+  EXPECT_TRUE(1e-12 > fabs(-M_PI/4.0 - state(RobotLocalization::StateMemberPitch)));
+  EXPECT_FLOAT_EQ(M_PI/2, state(RobotLocalization::StateMemberYaw));
 
-  EXPECT_TRUE(1e-12 > state(robot_localization::StateMemberVx));
-  EXPECT_FLOAT_EQ(-1.0, state(robot_localization::StateMemberVy));
-  EXPECT_FLOAT_EQ(M_PI / 4, state(robot_localization::StateMemberVz));
+  EXPECT_TRUE(1e-12 > state(RobotLocalization::StateMemberVx));
+  EXPECT_FLOAT_EQ(-1.0, state(RobotLocalization::StateMemberVy));
+  EXPECT_FLOAT_EQ(M_PI/4, state(RobotLocalization::StateMemberVz));
 
-  EXPECT_TRUE(1e-12 > state(robot_localization::StateMemberVroll));
-  EXPECT_FLOAT_EQ(-M_PI / 4.0, state(robot_localization::StateMemberVpitch));
-  EXPECT_FLOAT_EQ(0, state(robot_localization::StateMemberVyaw));
+  EXPECT_TRUE(1e-12 > state(RobotLocalization::StateMemberVroll));
+  EXPECT_FLOAT_EQ(-M_PI/4.0, state(RobotLocalization::StateMemberVpitch));
+  EXPECT_FLOAT_EQ(0, state(RobotLocalization::StateMemberVyaw));
 }
 
-int main(int argc, char ** argv)
+int main(int argc, char **argv)
 {
-  rclcpp::init(argc, argv);
-  node = rclcpp::Node::make_shared("test_ros_robot_localization_listener");
+  ros::init(argc, argv, "test_robot_localization_estimator");
 
-  g_listener = std::make_unique<robot_localization::RosRobotLocalizationListener>(node);
+  g_listener = new RobotLocalization::RosRobotLocalizationListener();
 
-  ::testing::InitGoogleTest(&argc, argv);
+  testing::InitGoogleTest(&argc, argv);
 
   int res = RUN_ALL_TESTS();
 
-  rclcpp::shutdown();
-  node = nullptr;
-  g_listener = nullptr;
+  delete g_listener;
 
   return res;
 }
