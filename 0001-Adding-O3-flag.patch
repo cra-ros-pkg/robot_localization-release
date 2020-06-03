@@ -1,0 +1,25 @@
+From cc8901e8d1faae13df9709ed1a8de5f01fcef54b Mon Sep 17 00:00:00 2001
+From: Tom Moore <tmoore@locusrobotics.com>
+Date: Wed, 3 Jun 2020 17:06:06 +0100
+Subject: [PATCH] Adding O3 flag
+
+---
+ debian/rules.em | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/debian/rules.em b/debian/rules.em
+index 1c02dd4..abc62d2 100755
+--- a/debian/rules.em
++++ b/debian/rules.em
+@@ -16,7 +16,7 @@ export LDFLAGS=
+ export PKG_CONFIG_PATH=@(InstallationPrefix)/lib/pkgconfig
+ # Explicitly enable -DNDEBUG, see:
+ # 	https://github.com/ros-infrastructure/bloom/issues/327
+-export DEB_CXXFLAGS_MAINT_APPEND=-DNDEBUG
++export DEB_CXXFLAGS_MAINT_APPEND=-DNDEBUG -O3
+ 
+ %:
+ 	dh $@@ -v --buildsystem=cmake
+-- 
+2.25.1
+
