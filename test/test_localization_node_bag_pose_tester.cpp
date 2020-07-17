@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, 2016, Charles River Analytics, Inc.
+ * Copyright (c) 2014, 2015, 2016 Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,62 +30,62 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <ros/ros.h>
-#include <nav_msgs/Odometry.h>
-
+#include <nav_msgs/msg/odometry.hpp>
 #include <gtest/gtest.h>
-
+#include <cmath>
 #include <fstream>
+#include <functional>  // for bind()
+
 #include <iostream>
+#include <memory>
+#include <sstream>
 #include <string>
+#include "rclcpp/rclcpp.hpp"
 
-nav_msgs::Odometry filtered_;
+// using namespace std;
 
-void filterCallback(const nav_msgs::OdometryConstPtr &msg)
+nav_msgs::msg::Odometry filtered_;
+
+using namespace std::chrono_literals;
+
+void filterCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
 {
   filtered_ = *msg;
 }
 
-TEST(BagTest, PoseCheck)
-{
-  ros::NodeHandle nh;
-  ros::NodeHandle nhLocal("~");
+TEST(BagTest, PoseCheck) {
+  // node handle is created as per ros2
+  auto node = rclcpp::Node::make_shared("localization_node_bag_pose_tester");
 
-  double finalX = 0;
-  double finalY = 0;
-  double finalZ = 0;
-  double tolerance = 0;
-  bool outputFinalPosition = false;
-  std::string finalPositionFile;
+  // getting parameters value from yaml file using get_parameter() API
+  double finalX = node->declare_parameter("final_x", 0.0);
+  double finalY = node->declare_parameter("final_y", 0.0);
+  double finalZ = node->declare_parameter("final_z", 0.0);
+  double tolerance = node->declare_parameter("tolerance", 0.0);
+  bool outputFinalPosition = node->declare_parameter("output_final_position", false);
+  std::string finalPositionFile = node->declare_parameter("output_location",
+      std::string("test.txt"));
 
-  nhLocal.getParam("final_x", finalX);
-  nhLocal.getParam("final_y", finalY);
-  nhLocal.getParam("final_z", finalZ);
-  nhLocal.getParam("tolerance", tolerance);
-  nhLocal.param("output_final_position", outputFinalPosition, false);
-  nhLocal.param("output_location", finalPositionFile, std::string("test.txt"));
+  // subscribe call has been changed as per ros2
+  auto filteredSub = node->create_subscription<nav_msgs::msg::Odometry>(
+    "/odometry/filtered", rclcpp::QoS(1), filterCallback);
 
-  ros::Subscriber filteredSub = nh.subscribe("/odometry/filtered", 1, &filterCallback);
-
-  while (ros::ok())
-  {
-    ros::spinOnce();
-    ros::Duration(0.0333333).sleep();
+  // changed the spinning and timing as per ros2
+  while (rclcpp::ok()) {
+    rclcpp::spin_some(node);
+    rclcpp::Rate(3).sleep();
   }
 
-  if (outputFinalPosition)
-  {
-    try
-    {
+  if (outputFinalPosition) {
+    try {
       std::ofstream posOut;
       posOut.open(finalPositionFile.c_str(), std::ofstream::app);
-      posOut << filtered_.pose.pose.position.x << " " << filtered_.pose.pose.position.y << " " <<
-                filtered_.pose.pose.position.z << std::endl;
+      posOut << filtered_.pose.pose.position.x << " " <<
+        filtered_.pose.pose.position.y << " " <<
+        filtered_.pose.pose.position.z << std::endl;
       posOut.close();
-    }
-    catch(...)
-    {
-      ROS_ERROR_STREAM("Unable to open output file.\n");
+    } catch (...) {
+      RCLCPP_ERROR(node->get_logger(), "Unable to open output file.\n");
     }
   }
 
@@ -93,19 +93,20 @@ TEST(BagTest, PoseCheck)
   double yDiff = filtered_.pose.pose.position.y - finalY;
   double zDiff = filtered_.pose.pose.position.z - finalZ;
 
-  EXPECT_LT(::sqrt(xDiff*xDiff + yDiff*yDiff + zDiff*zDiff), tolerance);
+  std::cout << "xDiff =" << xDiff << std::endl;
+  std::cout << "yDiff =" << yDiff << std::endl;
+  std::cout << "zDiff =" << zDiff << std::endl;
+
+  EXPECT_LT(::sqrt(xDiff * xDiff + yDiff * yDiff + zDiff * zDiff), tolerance);
 }
 
-int main(int argc, char **argv)
+int main(int argc, char ** argv)
 {
-  testing::InitGoogleTest(&argc, argv);
+  rclcpp::init(argc, argv);
+  ::testing::InitGoogleTest(&argc, argv);
+  rclcpp::Rate(0.5).sleep();
 
-  ros::init(argc, argv, "localization_node-bag-pose-tester");
-  ros::Time::init();
-
-  // Give ekf_localization_node time to initialize
-  ros::Duration(2.0).sleep();
-
-  return RUN_ALL_TESTS();
+  int ret = RUN_ALL_TESTS();
+  rclcpp::shutdown();
+  return ret;
 }
-
