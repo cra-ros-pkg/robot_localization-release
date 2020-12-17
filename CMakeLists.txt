@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.0.2)
 project(robot_localization)
 
 if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
@@ -28,6 +28,11 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(YAML_CPP yaml-cpp)
+
+
+# Geographiclib installs FindGeographicLib.cmake to this non-standard location
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "/usr/share/cmake/geographiclib/")
+find_package(GeographicLib REQUIRED COMPONENTS STATIC)
 
 # Attempt to find Eigen using its own CMake module.
 # If that fails, fall back to cmake_modules package.
@@ -163,8 +168,8 @@ target_link_libraries(ekf_localization_nodelet ros_filter ${catkin_LIBRARIES})
 target_link_libraries(ukf_localization_node ros_filter ${catkin_LIBRARIES})
 target_link_libraries(ukf_localization_nodelet ros_filter ${catkin_LIBRARIES})
 target_link_libraries(navsat_transform filter_utilities ros_filter_utilities ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
-target_link_libraries(navsat_transform_node navsat_transform ${catkin_LIBRARIES})
-target_link_libraries(navsat_transform_nodelet navsat_transform ${catkin_LIBRARIES})
+target_link_libraries(navsat_transform_node navsat_transform ${catkin_LIBRARIES} ${GeographicLib_LIBRARIES})
+target_link_libraries(navsat_transform_nodelet navsat_transform ${catkin_LIBRARIES} ${GeographicLib_LIBRARIES})
 
 #############
 ## Install ##
