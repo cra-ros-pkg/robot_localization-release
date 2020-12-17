@@ -65,6 +65,7 @@
 
 #include <fstream>
 #include <map>
+#include <memory>
 #include <numeric>
 #include <queue>
 #include <string>
@@ -474,6 +475,10 @@ template<class T> class RosFilter
     //! @brief Whether or not we use a control term
     //!
     bool useControl_;
+
+    //! @brief Whether or not to print warning for tf lookup failure
+    //!
+    bool silentTfFailure_;
 
     //! @brief The max (worst) dynamic diagnostic level.
     //!
