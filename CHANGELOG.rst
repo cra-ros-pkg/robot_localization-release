@@ -2,9 +2,9 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.6.9 (2020-12-17)
+2.7.0 (2020-12-17)
 ------------------
-* Fix warning "Failed to meet update rate!" (`#602 <https://github.com/cra-ros-pkg/robot_localization/issues/602>`_)
+* Making repeated state publication optional (`#595 <https://github.com/cra-ros-pkg/robot_localization/issues/595>`_)
 * Fix sign error in dFY_dP part of transferFunctionJacobian\_ (`#592 <https://github.com/cra-ros-pkg/robot_localization/issues/592>`_)
 * Fix typo in navsat_transform_node.rst (`#588 <https://github.com/cra-ros-pkg/robot_localization/issues/588>`_)
 * fix issue caused by starting on uneven terrain (`#582 <https://github.com/cra-ros-pkg/robot_localization/issues/582>`_)
@@ -12,7 +12,7 @@ Changelog for package robot_localization
 * Fix frame id of imu in differential mode, closes `#482 <https://github.com/cra-ros-pkg/robot_localization/issues/482>`_. (`#522 <https://github.com/cra-ros-pkg/robot_localization/issues/522>`_)
 * navsat_transform diagram to address `#550 <https://github.com/cra-ros-pkg/robot_localization/issues/550>`_ (`#570 <https://github.com/cra-ros-pkg/robot_localization/issues/570>`_)
 * Increasing the minimum CMake version (`#573 <https://github.com/cra-ros-pkg/robot_localization/issues/573>`_)
-* Contributors: Aleksander Bojda, David Jensen, James Baxter, Jeffrey Kane Johnson, Mabel Zhang, Mike, Ronald Ensing, Tom Moore
+* Contributors: Aleksander Bojda, David Jensen, James Baxter, Jeffrey Kane Johnson, Mabel Zhang, Ronald Ensing, Tom Moore
 
 2.6.8 (2020-06-03)
 ------------------

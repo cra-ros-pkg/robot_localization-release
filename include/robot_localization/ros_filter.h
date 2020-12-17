@@ -433,6 +433,9 @@ template<class T> class RosFilter
     //! @brief Whether the filter is enabled or not. See disabledAtStartup_.
     bool enabled_;
 
+    //! Whether we'll allow old measurements to cause a re-publication of the updated state
+    bool permitCorrectedPublication_;
+
     //! @brief By default, the filter predicts and corrects up to the time of the latest measurement. If this is set
     //! to true, the filter does the same, but then also predicts up to the current time step.
     //!
@@ -475,10 +478,6 @@ template<class T> class RosFilter
     //! @brief Whether or not we use a control term
     //!
     bool useControl_;
-
-    //! @brief Whether or not to print warning for tf lookup failure
-    //!
-    bool silentTfFailure_;
 
     //! @brief The max (worst) dynamic diagnostic level.
     //!
@@ -613,6 +612,10 @@ template<class T> class RosFilter
     //! @brief last call of periodicUpdate
     //!
     ros::Time lastDiagTime_;
+
+    //! @brief The time of the most recent published state
+    //!
+    ros::Time lastPublishedStamp_;
 
     //! @brief Store the last time set pose message was received
     //!
