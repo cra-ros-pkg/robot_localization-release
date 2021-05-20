@@ -1,0 +1,12 @@
+Source: ros-galactic-robot-localization
+Section: misc
+Priority: optional
+Maintainer: Tom Moore <ayrton04@gmail.com>
+Build-Depends: debhelper (>= 9.0.0), libboost-dev, libeigen3-dev, libgeographic-dev, ros-galactic-ament-cmake, ros-galactic-ament-cmake-gtest, ros-galactic-ament-lint-auto, ros-galactic-ament-lint-common, ros-galactic-builtin-interfaces, ros-galactic-diagnostic-msgs, ros-galactic-diagnostic-updater, ros-galactic-geographic-msgs, ros-galactic-geometry-msgs, ros-galactic-launch-ros, ros-galactic-launch-testing-ament-cmake, ros-galactic-nav-msgs, ros-galactic-rclcpp, ros-galactic-rmw-implementation, ros-galactic-rosidl-default-generators, ros-galactic-sensor-msgs, ros-galactic-std-msgs, ros-galactic-std-srvs, ros-galactic-tf2, ros-galactic-tf2-eigen, ros-galactic-tf2-geometry-msgs, ros-galactic-tf2-ros, ros-galactic-yaml-cpp-vendor, ros-galactic-ros-workspace, ros-galactic-rosidl-typesupport-fastrtps-c, ros-galactic-rosidl-typesupport-fastrtps-cpp
+Homepage: http://ros.org/wiki/robot_localization
+Standards-Version: 3.9.2
+
+Package: ros-galactic-robot-localization
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libboost-dev, libeigen3-dev, libgeographic-dev, ros-galactic-diagnostic-msgs, ros-galactic-diagnostic-updater, ros-galactic-geographic-msgs, ros-galactic-geometry-msgs, ros-galactic-nav-msgs, ros-galactic-rclcpp, ros-galactic-rmw-implementation, ros-galactic-rosidl-default-runtime, ros-galactic-sensor-msgs, ros-galactic-std-msgs, ros-galactic-std-srvs, ros-galactic-tf2, ros-galactic-tf2-eigen, ros-galactic-tf2-geometry-msgs, ros-galactic-tf2-ros, ros-galactic-yaml-cpp-vendor, ros-galactic-ros-workspace
+Description: Provides nonlinear state estimation through sensor fusion of an abritrary number of sensors.
