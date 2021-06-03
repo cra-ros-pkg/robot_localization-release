@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, 2016 Charles River Analytics, Inc.
+ * Copyright (c) 2014, 2015, 2016, Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,164 +30,167 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <gtest/gtest.h>
+#include "robot_localization/filter_base.h"
+#include "robot_localization/filter_common.h"
+
 #include <Eigen/Dense>
+
+#include <gtest/gtest.h>
 
 #include <iostream>
 #include <queue>
 #include <string>
 
-#include "robot_localization/filter_common.hpp"
-#include "robot_localization/filter_utilities.hpp"
-#include "robot_localization/filter_base.hpp"
-#include "robot_localization/measurement.hpp"
+using RobotLocalization::STATE_SIZE;
+using RobotLocalization::Measurement;
 
-using robot_localization::Measurement;
-using robot_localization::STATE_SIZE;
-
-namespace robot_localization
+namespace RobotLocalization
 {
 
 class FilterDerived : public FilterBase
 {
-public:
-  rclcpp::Time val;
+  public:
+    double val;
 
-  FilterDerived()
-  : val(0) {}
+    FilterDerived() : val(0) { }
 
-  void correct(const Measurement & measurement)
-  {
-    EXPECT_EQ(val, measurement.time_);
-    EXPECT_EQ(measurement.topic_name_, "topic");
+    void correct(const Measurement &measurement)
+    {
+      EXPECT_EQ(val, measurement.time_);
+      EXPECT_EQ(measurement.topicName_, "topic");
 
-    EXPECT_EQ(measurement.update_vector_.size(), 10u);
-    for (size_t i = 0; i < measurement.update_vector_.size(); ++i) {
-      EXPECT_EQ(measurement.update_vector_[i], true);
+      EXPECT_EQ(measurement.updateVector_.size(), 10u);
+      for (size_t i = 0; i < measurement.updateVector_.size(); ++i)
+      {
+        EXPECT_EQ(measurement.updateVector_[i], true);
+      }
     }
-  }
-  void predict(
-    const rclcpp::Time & /*reference_time*/,
-    const rclcpp::Duration & /*delta*/) {}
+
+    void predict(const double refTime, const double delta)
+    {
+      val = delta;
+    }
 };
 
 class FilterDerived2 : public FilterBase
 {
-public:
-  FilterDerived2() {}
+  public:
+    FilterDerived2() { }
 
-  void correct(const Measurement & /*measurement*/) {}
+    void correct(const Measurement &measurement)
+    {
+    }
 
-  void predict(
-    const rclcpp::Time & /*reference_time*/,
-    const rclcpp::Duration & /*delta*/) {}
+    void predict(const double refTime, const double delta)
+    {
+    }
 
-  void processMeasurement(const Measurement & measurement)
-  {
-    FilterBase::processMeasurement(measurement);
-  }
+    void processMeasurement(const Measurement &measurement)
+    {
+      FilterBase::processMeasurement(measurement);
+    }
 };
 
-}  // namespace robot_localization
+}  // namespace RobotLocalization
 
-TEST(FilterBaseTest, MeasurementStruct) {
-  robot_localization::Measurement meas1;
-  robot_localization::Measurement meas2;
+TEST(FilterBaseTest, MeasurementStruct)
+{
+    RobotLocalization::Measurement meas1;
+    RobotLocalization::Measurement meas2;
 
-  EXPECT_EQ(meas1.topic_name_, std::string(""));
-  EXPECT_EQ(meas1.time_, rclcpp::Time(0));
-  EXPECT_EQ(meas2.time_, rclcpp::Time(0));
+    EXPECT_EQ(meas1.topicName_, std::string(""));
+    EXPECT_EQ(meas1.time_, 0);
+    EXPECT_EQ(meas2.time_, 0);
 
-  // Comparison test is true if the first
-  // argument is > the second, so should
-  // be false if they're equal.
-  EXPECT_EQ(meas1(meas1, meas2), false);
-  EXPECT_EQ(meas2(meas2, meas1), false);
+    // Comparison test is true if the first
+    // argument is > the second, so should
+    // be false if they're equal.
+    EXPECT_EQ(meas1(meas1, meas2), false);
+    EXPECT_EQ(meas2(meas2, meas1), false);
 
-  builtin_interfaces::msg::Time msg1;
-  msg1.sec = 0;
-  msg1.nanosec = 100;
+    meas1.time_ = 100;
+    meas2.time_ = 200;
 
-  builtin_interfaces::msg::Time msg2;
-  msg2.sec = 0;
-  msg2.nanosec = 200;
-
-  meas1.time_ = msg1;
-  meas2.time_ = msg2;
-
-  EXPECT_EQ(meas1(meas1, meas2), false);
-  EXPECT_EQ(meas1(meas2, meas1), true);
-  EXPECT_EQ(meas2(meas1, meas2), false);
-  EXPECT_EQ(meas2(meas2, meas1), true);
+    EXPECT_EQ(meas1(meas1, meas2), false);
+    EXPECT_EQ(meas1(meas2, meas1), true);
+    EXPECT_EQ(meas2(meas1, meas2), false);
+    EXPECT_EQ(meas2(meas2, meas1), true);
 }
 
-TEST(FilterBaseTest, DerivedFilterGetSet) {
-  robot_localization::FilterDerived derived;
+TEST(FilterBaseTest, DerivedFilterGetSet)
+{
+    using RobotLocalization::FilterDerived;
 
-  // With the ostream argument as NULL,
-  // the debug flag will remain false.
-  derived.setDebug(true);
+    FilterDerived derived;
 
-  EXPECT_FALSE(derived.getDebug());
+    // With the ostream argument as NULL,
+    // the debug flag will remain false.
+    derived.setDebug(true);
 
-  // Now set the stream and do it again
-  std::stringstream os;
-  derived.setDebug(true, &os);
+    EXPECT_FALSE(derived.getDebug());
 
-  EXPECT_TRUE(derived.getDebug());
+    // Now set the stream and do it again
+    std::stringstream os;
+    derived.setDebug(true, &os);
 
-  // Simple get/set checks
-  double timeout = 7.4;
-  derived.setSensorTimeout(rclcpp::Duration::from_seconds(timeout));
-  EXPECT_EQ(derived.getSensorTimeout(), rclcpp::Duration::from_seconds(timeout));
+    EXPECT_TRUE(derived.getDebug());
 
-  double lastMeasTime = 3.83;
-  derived.setLastMeasurementTime(rclcpp::Time(lastMeasTime));
-  EXPECT_EQ(derived.getLastMeasurementTime(), rclcpp::Time(lastMeasTime));
+    // Simple get/set checks
+    double timeout = 7.4;
+    derived.setSensorTimeout(timeout);
+    EXPECT_EQ(derived.getSensorTimeout(), timeout);
 
-  Eigen::MatrixXd pnCovar(STATE_SIZE, STATE_SIZE);
-  for (size_t i = 0; i < STATE_SIZE; ++i) {
-    for (size_t j = 0; j < STATE_SIZE; ++j) {
-      pnCovar(i, j) = static_cast<double>(i * j);
+    double lastMeasTime = 3.83;
+    derived.setLastMeasurementTime(lastMeasTime);
+    EXPECT_EQ(derived.getLastMeasurementTime(), lastMeasTime);
+
+    Eigen::MatrixXd pnCovar(STATE_SIZE, STATE_SIZE);
+    for (size_t i = 0; i < STATE_SIZE; ++i)
+    {
+      for (size_t j = 0; j < STATE_SIZE; ++j)
+      {
+        pnCovar(i, j) = static_cast<double>(i * j);
+      }
     }
-  }
-  derived.setProcessNoiseCovariance(pnCovar);
-  EXPECT_EQ(derived.getProcessNoiseCovariance(), pnCovar);
+    derived.setProcessNoiseCovariance(pnCovar);
+    EXPECT_EQ(derived.getProcessNoiseCovariance(), pnCovar);
 
-  Eigen::VectorXd state(STATE_SIZE);
-  state.setZero();
-  derived.setState(state);
-  EXPECT_EQ(derived.getState(), state);
+    Eigen::VectorXd state(STATE_SIZE);
+    state.setZero();
+    derived.setState(state);
+    EXPECT_EQ(derived.getState(), state);
 
-  EXPECT_EQ(derived.getInitializedStatus(), false);
+    EXPECT_EQ(derived.getInitializedStatus(), false);
 }
 
-TEST(FilterBaseTest, MeasurementProcessing) {
-  robot_localization::FilterDerived2 derived;
+TEST(FilterBaseTest, MeasurementProcessing)
+{
+  using RobotLocalization::FilterDerived2;
+
+  FilterDerived2 derived;
 
   Measurement meas;
 
   Eigen::VectorXd measurement(STATE_SIZE);
-  for (size_t i = 0; i < STATE_SIZE; ++i) {
+  for (size_t i = 0; i < STATE_SIZE; ++i)
+  {
     measurement[i] = 0.1 * static_cast<double>(i);
   }
 
   Eigen::MatrixXd measurementCovariance(STATE_SIZE, STATE_SIZE);
-  for (size_t i = 0; i < STATE_SIZE; ++i) {
-    for (size_t j = 0; j < STATE_SIZE; ++j) {
+  for (size_t i = 0; i < STATE_SIZE; ++i)
+  {
+    for (size_t j = 0; j < STATE_SIZE; ++j)
+    {
       measurementCovariance(i, j) = 0.1 * static_cast<double>(i * j);
     }
   }
 
-  builtin_interfaces::msg::Time msg;
-  msg.sec = 0;
-  msg.nanosec = 1000;
-
-  meas.topic_name_ = "odomTest";
+  meas.topicName_ = "odomTest";
   meas.measurement_ = measurement;
   meas.covariance_ = measurementCovariance;
-  meas.update_vector_.resize(STATE_SIZE, true);
-  meas.time_ = msg;
+  meas.updateVector_.resize(STATE_SIZE, true);
+  meas.time_ = 1000;
 
   // The filter shouldn't be initializedyet
   EXPECT_FALSE(derived.getInitializedStatus());
@@ -199,15 +202,14 @@ TEST(FilterBaseTest, MeasurementProcessing) {
   EXPECT_TRUE(derived.getInitializedStatus());
   EXPECT_EQ(derived.getState(), measurement);
 
-  msg.nanosec = 1002;
   // Process a measurement and make sure it updates the
   // lastMeasurementTime variable
-  meas.time_ = msg;
+  meas.time_ = 1002;
   derived.processMeasurement(meas);
   EXPECT_EQ(derived.getLastMeasurementTime(), meas.time_);
 }
 
-int main(int argc, char ** argv)
+int main(int argc, char **argv)
 {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
