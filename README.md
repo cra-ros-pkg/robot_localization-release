@@ -1,3 +1,26 @@
+## robot_localization (rolling) - 3.3.0-1
+
+The packages in the `robot_localization` repository were released into the `rolling` distro by running `/usr/bin/bloom-release robot_localization --rosdistro rolling --track rolling --edit` on `Wed, 15 Sep 2021 18:53:46 -0000`
+
+The `robot_localization` package was released.
+
+Version of package(s) in repository `robot_localization`:
+
+- upstream repository: https://github.com/cra-ros-pkg/robot_localization.git
+- release repository: unknown
+- rosdistro version: `null`
+- old version: `null`
+- new version: `3.3.0-1`
+
+Versions of tools used:
+
+- bloom version: `0.10.7`
+- catkin_pkg version: `0.4.23`
+- rosdep version: `0.21.0`
+- rosdistro version: `0.8.3`
+- vcstools version: `0.1.42`
+
+
 ## robot_localization (galactic) - 3.2.4-1
 
 The packages in the `robot_localization` repository were released into the `galactic` distro by running `/usr/bin/bloom-release robot_localization --rosdistro galactic --track galactic --edit` on `Wed, 15 Sep 2021 17:46:24 -0000`
