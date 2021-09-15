@@ -1,0 +1,12 @@
+Source: ros-rolling-robot-localization
+Section: misc
+Priority: optional
+Maintainer: Tom Moore <ayrton04@gmail.com>
+Build-Depends: debhelper (>= 9.0.0), libboost-dev, libeigen3-dev, libgeographic-dev, ros-rolling-ament-cmake, ros-rolling-ament-cmake-gtest, ros-rolling-ament-lint-auto, ros-rolling-ament-lint-common, ros-rolling-builtin-interfaces, ros-rolling-diagnostic-msgs, ros-rolling-diagnostic-updater, ros-rolling-geographic-msgs, ros-rolling-geometry-msgs, ros-rolling-launch-ros, ros-rolling-launch-testing-ament-cmake, ros-rolling-message-filters, ros-rolling-nav-msgs, ros-rolling-rclcpp, ros-rolling-rmw-implementation, ros-rolling-rosidl-default-generators, ros-rolling-sensor-msgs, ros-rolling-std-msgs, ros-rolling-std-srvs, ros-rolling-tf2, ros-rolling-tf2-eigen, ros-rolling-tf2-geometry-msgs, ros-rolling-tf2-ros, ros-rolling-yaml-cpp-vendor, ros-rolling-ros-workspace, ros-rolling-rosidl-typesupport-fastrtps-c, ros-rolling-rosidl-typesupport-fastrtps-cpp
+Homepage: http://ros.org/wiki/robot_localization
+Standards-Version: 3.9.2
+
+Package: ros-rolling-robot-localization
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libboost-dev, libeigen3-dev, libgeographic-dev, ros-rolling-diagnostic-msgs, ros-rolling-diagnostic-updater, ros-rolling-geographic-msgs, ros-rolling-geometry-msgs, ros-rolling-message-filters, ros-rolling-nav-msgs, ros-rolling-rclcpp, ros-rolling-rmw-implementation, ros-rolling-rosidl-default-runtime, ros-rolling-sensor-msgs, ros-rolling-std-msgs, ros-rolling-std-srvs, ros-rolling-tf2, ros-rolling-tf2-eigen, ros-rolling-tf2-geometry-msgs, ros-rolling-tf2-ros, ros-rolling-yaml-cpp-vendor, ros-rolling-ros-workspace
+Description: Provides nonlinear state estimation through sensor fusion of an abritrary number of sensors.
