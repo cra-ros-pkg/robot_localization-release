@@ -210,6 +210,10 @@ class NavSatTransform
     //!
     bool use_local_cartesian_;
 
+    //! @brief When true, do not print warnings for tf lookup failures.
+    //!
+    bool tf_silent_failure_;
+
     //! @brief Local Cartesian projection around gps origin
     //!
     GeographicLib::LocalCartesian gps_local_cartesian_;
@@ -244,6 +248,11 @@ class NavSatTransform
     //! This is needed for obtaining transforms from the robot's body frame to the frames of sensors (IMU and GPS)
     //!
     std::string base_link_frame_id_;
+
+    //! @brief The cartesian frame ID, default as 'local_enu' if using Local Cartesian or 'utm' if using the UTM
+    //! coordinates as our cartesian.
+    //!
+    std::string cartesian_frame_id_;
 
     //! @brief The frame_id of the GPS message (specifies mounting location)
     //!
