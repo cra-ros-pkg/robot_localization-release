@@ -82,12 +82,14 @@ struct CallbackData
                const int updateSum,
                const bool differential,
                const bool relative,
+               const bool pose_use_child_frame,
                const double rejectionThreshold) :
     topicName_(topicName),
     updateVector_(updateVector),
     updateSum_(updateSum),
     differential_(differential),
     relative_(relative),
+    pose_use_child_frame_(pose_use_child_frame),
     rejectionThreshold_(rejectionThreshold)
   {
   }
@@ -97,6 +99,7 @@ struct CallbackData
   int updateSum_;
   bool differential_;
   bool relative_;
+  bool pose_use_child_frame_;
   double rejectionThreshold_;
 };
 
@@ -225,6 +228,16 @@ template<class T> class RosFilter
     //!
     void integrateMeasurements(const ros::Time &currentTime);
 
+    //! @brief Differentiate angular velocity for angular acceleration
+    //!
+    //! @param[in] currentTime - The time at which to carry out differentiation (the current time)
+    //!
+    //! Maybe more state variables can be time-differentiated to estimate higher-order states,
+    //! but now we only focus on obtaining the angular acceleration. It implements a backward-
+    //! Euler differentiation.
+    //!
+    void differentiateMeasurements(const ros::Time &currentTime);
+
     //! @brief Loads all parameters from file
     //!
     void loadParams();
@@ -245,11 +258,13 @@ template<class T> class RosFilter
     //! @param[in] msg - The ROS stamped pose with covariance message to take in
     //! @param[in] callbackData - Relevant static callback data
     //! @param[in] targetFrame - The target frame_id into which to transform the data
+    //! @param[in] poseSourceFrame - The source frame_id from which to transform the data
     //! @param[in] imuData - Whether this data comes from an IMU
     //!
     void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
                       const CallbackData &callbackData,
                       const std::string &targetFrame,
+                      const std::string &poseSourceFrame,
                       const bool imuData);
 
     //! @brief Callback method for manually setting/resetting the internal pose estimate
@@ -376,6 +391,7 @@ template<class T> class RosFilter
     bool prepareAcceleration(const sensor_msgs::Imu::ConstPtr &msg,
                              const std::string &topicName,
                              const std::string &targetFrame,
+                             const bool relative,
                              std::vector<int> &updateVector,
                              Eigen::VectorXd &measurement,
                              Eigen::MatrixXd &measurementCovariance);
@@ -384,6 +400,7 @@ template<class T> class RosFilter
     //! @param[in] msg - The pose message to prepare
     //! @param[in] topicName - The name of the topic over which this message was received
     //! @param[in] targetFrame - The target tf frame
+    //! @param[in] sourceFrame - The source tf frame
     //! @param[in] differential - Whether we're carrying out differential integration
     //! @param[in] relative - Whether this measurement is processed relative to the first
     //! @param[in] imuData - Whether this measurement is from an IMU
@@ -395,6 +412,7 @@ template<class T> class RosFilter
     bool preparePose(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
                      const std::string &topicName,
                      const std::string &targetFrame,
+                     const std::string &sourceFrame,
                      const bool differential,
                      const bool relative,
                      const bool imuData,
@@ -478,6 +496,10 @@ template<class T> class RosFilter
     //! @brief Whether or not we use a control term
     //!
     bool useControl_;
+
+    //! @brief When true, do not print warnings for tf lookup failures.
+    //!
+    bool tfSilentFailure_;
 
     //! @brief The max (worst) dynamic diagnostic level.
     //!
@@ -596,6 +618,22 @@ template<class T> class RosFilter
     //! The values are treated as static and always reported (i.e., this object is never cleared)
     //!
     std::map<std::string, std::string> staticDiagnostics_;
+
+    //! @brief Last time mark that time-differentiation is calculated
+    //!
+    ros::Time lastDiffTime_;
+
+    //! @brief Last record of filtered angular velocity
+    //!
+    tf2::Vector3 lastStateTwistRot_;
+
+    //! @brief Calculated angular acceleration from time-differencing
+    //!
+    tf2::Vector3 angular_acceleration_;
+
+    //! @brief Covariance of the calculated angular acceleration
+    //!
+    Eigen::MatrixXd angular_acceleration_cov_;
 
     //! @brief The most recent control input
     //!

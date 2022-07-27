@@ -91,6 +91,7 @@ namespace RobotLocalization
     nh_priv.param("frequency", frequency, 10.0);
     nh_priv.param("delay", delay, 0.0);
     nh_priv.param("transform_timeout", transform_timeout, 0.0);
+    nh_priv.param("cartesian_frame_id", cartesian_frame_id_, std::string(use_local_cartesian_ ? "local_enu" : "utm"));
     transform_timeout_.fromSec(transform_timeout);
 
     // Check for deprecated parameters
@@ -104,6 +105,9 @@ namespace RobotLocalization
       ROS_WARN("navsat_transform, Parameter 'broadcast_utm_transform_as_parent_frame' has been deprecated. Please use"
                "'broadcast_cartesian_transform_as_parent_frame' instead.");
     }
+
+    // Check if tf warnings should be suppressed
+    nh.getParam("/silent_tf_failure", tf_silent_failure_);
 
     // Subscribe to the messages and services we need
     datum_srv_ = nh.advertiseService("datum", &NavSatTransform::datumCallback, this);
@@ -320,11 +324,10 @@ namespace RobotLocalization
       {
         geometry_msgs::TransformStamped cartesian_transform_stamped;
         cartesian_transform_stamped.header.stamp = ros::Time::now();
-        std::string cartesian_frame_id = (use_local_cartesian_ ? "local_enu" : "utm");
         cartesian_transform_stamped.header.frame_id = (broadcast_cartesian_transform_as_parent_frame_ ?
-                                                       cartesian_frame_id : world_frame_id_);
+                                                       cartesian_frame_id_ : world_frame_id_);
         cartesian_transform_stamped.child_frame_id = (broadcast_cartesian_transform_as_parent_frame_ ?
-                                                      world_frame_id_ : cartesian_frame_id);
+                                                      world_frame_id_ : cartesian_frame_id_);
         cartesian_transform_stamped.transform = (broadcast_cartesian_transform_as_parent_frame_ ?
                                              tf2::toMsg(cartesian_world_trans_inverse_) :
                                              tf2::toMsg(cartesian_world_transform_));
@@ -519,7 +522,8 @@ namespace RobotLocalization
                                                                  gps_frame_id_,
                                                                  transform_time,
                                                                  ros::Duration(transform_timeout_),
-                                                                 offset);
+                                                                 offset,
+                                                                 tf_silent_failure_);
 
     if (can_transform)
     {
@@ -569,7 +573,8 @@ namespace RobotLocalization
                                                                  gps_frame_id_,
                                                                  transform_time,
                                                                  transform_timeout_,
-                                                                 gps_offset_rotated);
+                                                                 gps_offset_rotated,
+                                                                 tf_silent_failure_);
 
     if (can_transform)
     {
@@ -579,7 +584,8 @@ namespace RobotLocalization
                                                               base_link_frame_id_,
                                                               transform_time,
                                                               transform_timeout_,
-                                                              robot_orientation);
+                                                              robot_orientation,
+                                                              tf_silent_failure_);
 
       if (can_transform)
       {
@@ -687,7 +693,8 @@ namespace RobotLocalization
                                                                    msg->header.frame_id,
                                                                    msg->header.stamp,
                                                                    transform_timeout_,
-                                                                   target_frame_trans);
+                                                                   target_frame_trans,
+                                                                   tf_silent_failure_);
 
       if (can_transform)
       {
