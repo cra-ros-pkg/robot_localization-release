@@ -1,14 +1,14 @@
-From a3b5bf8dba0aefd0ab4551b9f13ebcec68dfe738 Mon Sep 17 00:00:00 2001
+From 6bf9a53184eb008ffa24b6da57a97b9318be4c11 Mon Sep 17 00:00:00 2001
 From: Tom Moore <tmoore@locusrobotics.com>
-Date: Wed, 3 Jun 2020 17:06:06 +0100
-Subject: [PATCH] Adding O3 flag
+Date: Wed, 27 Jul 2022 13:04:03 +0100
+Subject: [PATCH] Fix conflicts
 
 ---
  debian/rules.em | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/debian/rules.em b/debian/rules.em
-index 1c02dd4..abc62d2 100755
+index 276329d..8eb7c88 100755
 --- a/debian/rules.em
 +++ b/debian/rules.em
 @@ -16,7 +16,7 @@ export LDFLAGS=
@@ -17,9 +17,9 @@ index 1c02dd4..abc62d2 100755
  # 	https://github.com/ros-infrastructure/bloom/issues/327
 -export DEB_CXXFLAGS_MAINT_APPEND=-DNDEBUG
 +export DEB_CXXFLAGS_MAINT_APPEND=-DNDEBUG -O3
- 
- %:
- 	dh $@@ -v --buildsystem=cmake
+ ifneq ($(filter nocheck,$(DEB_BUILD_OPTIONS)),)
+ 	BUILD_TESTING_ARG=-DBUILD_TESTING=OFF -DCATKIN_ENABLE_TESTING=OFF
+ endif
 -- 
 2.25.1
 
