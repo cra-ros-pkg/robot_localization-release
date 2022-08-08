@@ -43,7 +43,7 @@ Specific parameters:
 * ``~map_frame``
 * ``~odom_frame``
 * ``~base_link_frame``
-* ``~base_link_frame_output``
+* ``~base_link_output_frame``
 * ``~world_frame``
 
 These parameters define the operating "mode" for ``robot_localization``. `REP-105 <http://www.ros.org/reps/rep-0105.html>`_ specifies three principal coordinate frames: *map*, *odom*, and *base_link*. *base_link* is the coordinate frame that is affixed to the robot. The robot's position in the *odom* frame will drift over time, but is accurate in the short term and should be continuous. The *map* frame, like the *odom* frame, is a world-fixed coordinate frame, and while it contains the most globally accurate position estimate for your robot, it is subject to discrete jumps, e.g., due to the fusion of GPS data. Here is how to use these parameters:
@@ -51,7 +51,7 @@ These parameters define the operating "mode" for ``robot_localization``. `REP-10
 1. Set the ``map_frame``, ``odom_frame``, and ``base_link_frame`` parameters to the appropriate frame names for your system.
 
  .. note:: If your system does not have a ``map_frame``, just remove it, and make sure ``world_frame`` is set to the value of ``odom_frame``.
- .. note:: If you are running multiple EKF instances and would like to "override" the output transform and message to have this frame for its ``child_frame_id``, you may set this.  The ``base_link_frame_output`` is optional and will default to the ``base_link_frame``. This helps to enable disconnected TF trees when multiple EKF instances are being run. When the final state is computed, we "override" the output transform and message to have this frame for its ``child_frame_id``.
+ .. note:: If you are running multiple EKF instances and would like to "override" the output transform and message to have this frame for its ``child_frame_id``, you may set this.  The ``base_link_output_frame`` is optional and will default to the ``base_link_frame``. This helps to enable disconnected TF trees when multiple EKF instances are being run. When the final state is computed, we "override" the output transform and message to have this frame for its ``child_frame_id``.
 
 2. If you are only fusing continuous position data such as wheel encoder odometry, visual odometry, or IMU data, set ``world_frame`` to your ``odom_frame`` value. This is the default behavior for the state estimation nodes in ``robot_localization``, and the most common use for it.
 3. If you are fusing global absolute position data that is subject to discrete jumps (e.g., GPS or position updates from landmark observations) then:
@@ -59,7 +59,7 @@ These parameters define the operating "mode" for ``robot_localization``. `REP-10
  i. Set your ``world_frame`` to your ``map_frame`` value
  ii. **Make sure** something else is generating the *odom->base_link* transform. This can even be another instance of a ``robot_localization`` state estimation node. However, that instance should *not* fuse the global data.
 
-The default values for ``map_frame``, ``odom_frame``, and ``base_link_frame`` are *map*, *odom,* and *base_link,* respectively. The ``base_link_frame_output`` parameter defaults to the value of ``base_link_frame``. The ``world_frame`` parameter defaults to the value of ``odom_frame``.
+The default values for ``map_frame``, ``odom_frame``, and ``base_link_frame`` are *map*, *odom,* and *base_link,* respectively. The ``base_link_output_frame`` parameter defaults to the value of ``base_link_frame``. The ``world_frame`` parameter defaults to the value of ``odom_frame``.
 
 ~transform_time_offset
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -168,15 +168,11 @@ Starts the filter with the specified state. The state is given as a 15-D vector 
 
 ~publish_tf
 ^^^^^^^^^^^
-If *true*, the state estimation node will publish the transform from the frame specified by the ``world_frame`` parameter to the frame specified by the ``base_link_frame`` parameter. Defaults to *true*.
+If *true*, the state estimation node will publish the transform from the frame specified by the ``world_frame`` parameter to its child. If the ``world_frame`` is the same as the ``map_frame`` it will publish the transform from the ``map_frame`` to the ``odom_frame`` and if the ``world_frame`` is the same as the ``odom_frame`` it will publish the transform from the ``odom_frame`` to the ``base_link_frame``. Defaults to *true*.
 
 ~publish_acceleration
 ^^^^^^^^^^^^^^^^^^^^^
 If *true*, the state estimation node will publish the linear acceleration state. Defaults to *false*.
-
-~permit_corrected_publication
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-When the state estimation nodes publish the state at time `t`, but then receive a measurement with a timestamp < `t`, they re-publish the corrected state, with the same time stamp as the previous publication. Setting this parameter to *false* disables that behavior. Defaults to *false*.
 
 ~print_diagnostics
 ^^^^^^^^^^^^^^^^^^
