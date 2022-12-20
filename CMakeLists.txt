@@ -30,9 +30,11 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Boost REQUIRED)
+find_package(yaml_cpp_vendor REQUIRED)
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(YAML_CPP yaml-cpp)
+# Geographiclib installs FindGeographicLib.cmake to this non-standard location
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "/usr/share/cmake/geographiclib/")
+find_package(GeographicLib REQUIRED COMPONENTS STATIC)
 
 set(library_name rl_lib)
 
@@ -55,6 +57,7 @@ include_directories(SYSTEM ${Eigen_INCLUDE_DIRS})
 include_directories(
   include
   ${EIGEN3_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIRS}
 )
 
 add_library(
@@ -94,8 +97,8 @@ add_executable(
 
 target_link_libraries(
   ${library_name}
+  ${GeographicLib_LIBRARIES}
   ${EIGEN3_LIBRARIES}
-  ${YAML_CPP_LIBRARIES}
 )
 
 ament_target_dependencies(
@@ -113,6 +116,7 @@ ament_target_dependencies(
   tf2_eigen
   tf2_geometry_msgs
   tf2_ros
+  yaml_cpp_vendor
 )
 
 target_link_libraries(
@@ -252,6 +256,22 @@ if(BUILD_TESTING)
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
   )
 
+  #### NAVSAT CONVERSION TESTS ####
+  ament_add_gtest(test_navsat_conversions test/test_navsat_conversions.cpp)
+  target_link_libraries(test_navsat_conversions ${library_name})
+
+  #### NAVSAT TRANSFORM TESTS ####
+  ament_add_gtest_executable(test_navsat_transform test/test_navsat_transform.cpp)
+  target_link_libraries(test_navsat_transform ${library_name})
+  rosidl_target_interfaces(test_navsat_transform
+    ${PROJECT_NAME} "rosidl_typesupport_cpp")
+  ament_add_test(test_navsat_transform
+    GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+    TIMEOUT 100
+    COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/test/test_navsat_transform.launch.py"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+  )
+
   ament_add_gtest_executable(test_ros_robot_localization_listener
                   test/test_ros_robot_localization_listener.cpp)
   target_link_libraries(test_ros_robot_localization_listener ${library_name})
@@ -286,6 +306,8 @@ if(BUILD_TESTING)
     #test_ekf_localization_node_bag2
     #test_ekf_localization_node_bag3
     test_robot_localization_estimator
+    test_navsat_conversions
+    test_navsat_transform
     test_ros_robot_localization_listener
     test_ros_robot_localization_listener_publisher
     #test_ukf_localization_node_bag1
@@ -316,6 +338,11 @@ install(TARGETS ${library_name}
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
+
+install(DIRECTORY
+  include/
+  DESTINATION include
+  USE_SOURCE_PERMISSIONS)
 
 # Install params config files.
 install(DIRECTORY
