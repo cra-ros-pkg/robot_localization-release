@@ -1,0 +1,12 @@
+Source: ros-foxy-robot-localization
+Section: misc
+Priority: optional
+Maintainer: Tom Moore <ayrton04@gmail.com>
+Build-Depends: debhelper (>= 9.0.0), libboost-dev, libeigen3-dev, libgeographic-dev, ros-foxy-ament-cmake, ros-foxy-ament-cmake-gtest <!nocheck>, ros-foxy-ament-lint-auto <!nocheck>, ros-foxy-ament-lint-common <!nocheck>, ros-foxy-builtin-interfaces, ros-foxy-builtin-interfaces <!nocheck>, ros-foxy-diagnostic-msgs, ros-foxy-diagnostic-updater, ros-foxy-geographic-msgs, ros-foxy-geometry-msgs, ros-foxy-launch-ros <!nocheck>, ros-foxy-launch-testing-ament-cmake <!nocheck>, ros-foxy-nav-msgs, ros-foxy-rclcpp, ros-foxy-rmw-implementation, ros-foxy-rosidl-default-generators, ros-foxy-sensor-msgs, ros-foxy-std-msgs, ros-foxy-std-srvs, ros-foxy-tf2, ros-foxy-tf2-eigen, ros-foxy-tf2-geometry-msgs, ros-foxy-tf2-ros, ros-foxy-yaml-cpp-vendor, ros-foxy-ros-workspace, ros-foxy-rosidl-typesupport-fastrtps-c, ros-foxy-rosidl-typesupport-fastrtps-cpp, ros-foxy-rosidl-typesupport-connext-c, ros-foxy-rosidl-typesupport-connext-cpp
+Homepage: http://ros.org/wiki/robot_localization
+Standards-Version: 3.9.2
+
+Package: ros-foxy-robot-localization
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libboost-dev, libeigen3-dev, libgeographic-dev, ros-foxy-diagnostic-msgs, ros-foxy-diagnostic-updater, ros-foxy-geographic-msgs, ros-foxy-geometry-msgs, ros-foxy-nav-msgs, ros-foxy-rclcpp, ros-foxy-rmw-implementation, ros-foxy-rosidl-default-runtime, ros-foxy-sensor-msgs, ros-foxy-std-msgs, ros-foxy-std-srvs, ros-foxy-tf2, ros-foxy-tf2-eigen, ros-foxy-tf2-geometry-msgs, ros-foxy-tf2-ros, ros-foxy-yaml-cpp-vendor, ros-foxy-ros-workspace
+Description: Provides nonlinear state estimation through sensor fusion of an abritrary number of sensors.
