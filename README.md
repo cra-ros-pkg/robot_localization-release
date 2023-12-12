@@ -1,3 +1,26 @@
+## robot_localization (noetic) - 2.7.5-1
+
+The packages in the `robot_localization` repository were released into the `noetic` distro by running `/usr/bin/bloom-release -t noetic -r noetic robot_localization` on `Tue, 12 Dec 2023 12:05:36 -0000`
+
+The `robot_localization` package was released.
+
+Version of package(s) in repository `robot_localization`:
+
+- upstream repository: https://github.com/cra-ros-pkg/robot_localization.git
+- release repository: https://github.com/cra-ros-pkg/robot_localization-release.git
+- rosdistro version: `2.7.4-1`
+- old version: `2.7.4-1`
+- new version: `2.7.5-1`
+
+Versions of tools used:
+
+- bloom version: `0.11.2`
+- catkin_pkg version: `1.0.0`
+- rosdep version: `0.22.2`
+- rosdistro version: `0.9.0`
+- vcstools version: `0.1.42`
+
+
 ## robot_localization (foxy) - 3.1.2-1
 
 The packages in the `robot_localization` repository were released into the `foxy` distro by running `/usr/bin/bloom-release robot_localization --rosdistro foxy --track foxy` on `Tue, 20 Dec 2022 20:17:43 -0000`
