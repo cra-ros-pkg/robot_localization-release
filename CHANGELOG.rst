@@ -2,6 +2,11 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.7.7 (2024-08-29)
+------------------
+* Remove the diagnostic warning about multiple pose sources (`#888 <https://github.com/cra-ros-pkg/robot_localization/issues/888>`_)
+* Contributors: Stephen Williams
+
 2.7.6 (2024-04-16)
 ------------------
 * Updating issue templates
