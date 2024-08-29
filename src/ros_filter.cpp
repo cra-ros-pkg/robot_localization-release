@@ -1606,20 +1606,7 @@ namespace RobotLocalization
     {
       for (int stateVar = StateMemberX; stateVar <= StateMemberYaw; ++stateVar)
       {
-        if (absPoseVarCounts[static_cast<StateMembers>(stateVar)] > 1)
-        {
-          std::stringstream stream;
-          stream <<  absPoseVarCounts[static_cast<StateMembers>(stateVar - POSITION_OFFSET)] <<
-              " absolute pose inputs detected for " << stateVariableNames_[stateVar] <<
-              ". This may result in oscillations. Please ensure that your variances for each "
-              "measured variable are set appropriately.";
-
-          addDiagnostic(diagnostic_msgs::DiagnosticStatus::WARN,
-                        stateVariableNames_[stateVar] + "_configuration",
-                        stream.str(),
-                        true);
-        }
-        else if (absPoseVarCounts[static_cast<StateMembers>(stateVar)] == 0)
+        if (absPoseVarCounts[static_cast<StateMembers>(stateVar)] == 0)
         {
           if ((static_cast<StateMembers>(stateVar) == StateMemberX &&
                twistVarCounts[static_cast<StateMembers>(StateMemberVx)] == 0) ||
